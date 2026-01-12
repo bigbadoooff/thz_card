@@ -78,6 +78,26 @@ class ThzCardEditor extends LitElement {
         </div>
 
         <div class="option">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this.config.show_fan_graph !== false}
+              @change=${this._toggleFanGraph}>
+            Show Fan Graph
+          </label>
+        </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this.config.show_heating_details_graph !== false}
+              @change=${this._toggleHeatingDetailsGraph}>
+            Show Heating Details Graph
+          </label>
+        </div>
+
+        <div class="option">
           <label for="graph_hours">Graph Time Range (hours)</label>
           <input
             id="graph_hours"
@@ -148,6 +168,18 @@ class ThzCardEditor extends LitElement {
   _toggleTemperatureGraph(ev) {
     const newConfig = { ...this.config };
     newConfig.show_temperature_graph = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _toggleFanGraph(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_fan_graph = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _toggleHeatingDetailsGraph(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_heating_details_graph = ev.target.checked;
     this._updateConfig(newConfig);
   }
 

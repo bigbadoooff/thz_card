@@ -41,6 +41,8 @@ class ThzCard extends LitElement {
       name: 'Heat Pump',
       show_temperature: true,
       show_temperature_graph: true,
+      show_fan_graph: true,
+      show_heating_details_graph: true,
       graph_hours: 24,
       show_mode: true,
       show_heating_circuit: true,
@@ -56,6 +58,8 @@ class ThzCard extends LitElement {
       name: 'Heat Pump',
       show_temperature: true,
       show_temperature_graph: true,
+      show_fan_graph: true,
+      show_heating_details_graph: true,
       graph_hours: 24,
       show_mode: true,
       show_heating_circuit: true,
@@ -87,6 +91,8 @@ class ThzCard extends LitElement {
         </div>
         <div class="card-content">
           ${this._renderTemperatureSection()}
+          ${this._renderFanSection()}
+          ${this._renderHeatingDetailsSection()}
           ${this.config.show_mode ? this._renderModeSection() : ''}
           ${this.config.show_heating_circuit ? this._renderHeatingCircuitSection() : ''}
           ${this.config.show_hot_water ? this._renderHotWaterSection() : ''}
@@ -348,6 +354,156 @@ class ThzCard extends LitElement {
     } finally {
       this._loadingHistory = false;
     }
+  }
+
+  _renderFanSection() {
+    // Find fan-related sensors
+    const fanSensors = this._findEntitiesByPattern(/fan|l[üu]fter|ventilat/i, 'sensor');
+    
+    if (fanSensors.length === 0 && !this.config.show_fan_graph) {
+      return '';
+    }
+    
+    return html`
+      <div class="section">
+        <div class="section-title">Fan Values</div>
+        ${this.config.show_fan_graph && fanSensors.length > 0 ? this._renderFanGraph(fanSensors) : ''}
+        <div class="sensor-grid">
+          ${fanSensors.slice(0, 6).map(entityId => {
+            const entity = this.hass.states[entityId];
+            if (!entity) return '';
+            
+            const name = this._getEntityName(entity);
+            const value = entity.state;
+            const unit = entity.attributes.unit_of_measurement || '';
+            
+            return html`
+              <div class="sensor-item">
+                <div class="sensor-name">${name}</div>
+                <div class="sensor-value">${value}${unit}</div>
+              </div>
+            `;
+          })}
+        </div>
+      </div>
+    `;
+  }
+
+  _renderFanGraph(fanSensors) {
+    const sensorsToGraph = fanSensors.slice(0, 4);
+    
+    if (sensorsToGraph.length === 0) {
+      return '';
+    }
+    
+    if (!this._historyData[sensorsToGraph[0]]) {
+      this._loadHistoryData(sensorsToGraph);
+    }
+
+    const colors = ['#9b59b6', '#3498db', '#1abc9c', '#f39c12'];
+    
+    return html`
+      <div class="temperature-graph">
+        <div class="graph-header">
+          <div class="graph-title">Fan History (${this.config.graph_hours || 24}h)</div>
+          <button 
+            class="refresh-button" 
+            @click=${() => this._loadHistoryData(sensorsToGraph)}
+            title="Refresh graph data">
+            ↻
+          </button>
+        </div>
+        <div class="graph-legend">
+          ${sensorsToGraph.map((entityId, index) => {
+            const entity = this.hass.states[entityId];
+            if (!entity) return '';
+            const name = this._getEntityName(entity);
+            return html`
+              <div class="legend-item">
+                <span class="legend-color" style="background-color: ${colors[index]}"></span>
+                <span class="legend-label">${name}</span>
+              </div>
+            `;
+          })}
+        </div>
+        ${this._renderGraph(sensorsToGraph, colors)}
+      </div>
+    `;
+  }
+
+  _renderHeatingDetailsSection() {
+    // Find heating detail sensors (booster, heat circuit pump, power, integral)
+    const heatingDetailSensors = this._findEntitiesByPattern(/booster|pump|power|integral|heizleistung|leistung/i, 'sensor');
+    
+    if (heatingDetailSensors.length === 0 && !this.config.show_heating_details_graph) {
+      return '';
+    }
+    
+    return html`
+      <div class="section">
+        <div class="section-title">Heating Details</div>
+        ${this.config.show_heating_details_graph && heatingDetailSensors.length > 0 ? this._renderHeatingDetailsGraph(heatingDetailSensors) : ''}
+        <div class="sensor-grid">
+          ${heatingDetailSensors.slice(0, 6).map(entityId => {
+            const entity = this.hass.states[entityId];
+            if (!entity) return '';
+            
+            const name = this._getEntityName(entity);
+            const value = entity.state;
+            const unit = entity.attributes.unit_of_measurement || '';
+            
+            return html`
+              <div class="sensor-item">
+                <div class="sensor-name">${name}</div>
+                <div class="sensor-value">${value}${unit}</div>
+              </div>
+            `;
+          })}
+        </div>
+      </div>
+    `;
+  }
+
+  _renderHeatingDetailsGraph(heatingDetailSensors) {
+    const sensorsToGraph = heatingDetailSensors.slice(0, 4);
+    
+    if (sensorsToGraph.length === 0) {
+      return '';
+    }
+    
+    if (!this._historyData[sensorsToGraph[0]]) {
+      this._loadHistoryData(sensorsToGraph);
+    }
+
+    const colors = ['#e74c3c', '#e67e22', '#16a085', '#2ecc71'];
+    
+    return html`
+      <div class="temperature-graph">
+        <div class="graph-header">
+          <div class="graph-title">Heating Details History (${this.config.graph_hours || 24}h)</div>
+          <button 
+            class="refresh-button" 
+            @click=${() => this._loadHistoryData(sensorsToGraph)}
+            title="Refresh graph data">
+            ↻
+          </button>
+        </div>
+        <div class="graph-legend">
+          ${sensorsToGraph.map((entityId, index) => {
+            const entity = this.hass.states[entityId];
+            if (!entity) return '';
+            const name = this._getEntityName(entity);
+            return html`
+              <div class="legend-item">
+                <span class="legend-color" style="background-color: ${colors[index]}"></span>
+                <span class="legend-label">${name}</span>
+              </div>
+            `;
+          })}
+        </div>
+        ${this._renderGraph(sensorsToGraph, colors)}
+      </div>
+    `;
   }
 
   _renderModeSection() {

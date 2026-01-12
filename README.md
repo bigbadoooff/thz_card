@@ -6,6 +6,8 @@ A custom card for Home Assistant to control THZ heat pumps. This card provides a
 
 - 🌡️ **Temperature Monitoring**: Display multiple temperature sensors in an organized grid
 - 📊 **Temperature Graphs**: Visual history graphs showing temperature trends over time
+- 💨 **Fan Monitoring**: Track fan values with dedicated graphs
+- 🔥 **Heating Details**: Monitor booster stage, heat circuit pump, and heating power with graphs
 - 🔧 **Operation Mode Control**: Easy switching between different operating modes
 - 🏠 **Heating Circuit Control**: Control heating circuit settings and temperatures
 - 💧 **Hot Water Management**: Monitor and control hot water settings
@@ -58,7 +60,9 @@ resources:
 | `entity_filter` | string | (optional) | Filter string for entity IDs (e.g., "my_heatpump") |
 | `show_temperature` | boolean | `true` | Show temperature sensors section |
 | `show_temperature_graph` | boolean | `true` | Show temperature history graph |
-| `graph_hours` | number | `24` | Number of hours to display in temperature graph (1-168) |
+| `show_fan_graph` | boolean | `true` | Show fan values history graph |
+| `show_heating_details_graph` | boolean | `true` | Show heating details (booster, pump, power) history graph |
+| `graph_hours` | number | `24` | Number of hours to display in graphs (1-168) |
 | `show_mode` | boolean | `true` | Show operation mode controls |
 | `show_heating_circuit` | boolean | `true` | Show heating circuit controls |
 | `show_hot_water` | boolean | `true` | Show hot water controls |
@@ -76,6 +80,8 @@ type: custom:thz-card
 name: My Heat Pump
 show_temperature: true
 show_temperature_graph: true
+show_fan_graph: true
+show_heating_details_graph: true
 graph_hours: 24
 show_mode: true
 show_heating_circuit: true
