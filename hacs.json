@@ -1,0 +1,7 @@
+{
+  "name": "THZ Card",
+  "content_in_root": false,
+  "filename": "thz-card.js",
+  "render_readme": true,
+  "homeassistant": "2021.12.0"
+}

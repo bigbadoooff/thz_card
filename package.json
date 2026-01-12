@@ -1,0 +1,31 @@
+{
+  "name": "thz-card",
+  "version": "1.0.0",
+  "description": "A custom card for Home Assistant to control THZ heat pumps",
+  "main": "dist/thz-card.js",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c --watch"
+  },
+  "keywords": [
+    "home-assistant",
+    "homeassistant",
+    "hass",
+    "custom-card",
+    "thz",
+    "heat-pump"
+  ],
+  "author": "bigbadoooff",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^4.9.6"
+  },
+  "dependencies": {
+    "custom-card-helpers": "^1.9.0",
+    "lit": "^3.1.0"
+  }
+}
