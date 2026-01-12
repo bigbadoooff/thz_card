@@ -113,14 +113,17 @@ const A=globalThis,w=t=>t,x=A.trustedTypes,E=x?x.createPolicy("lit-html",{create
         border-color: var(--primary-color);
       }
 
-      input[type="checkbox"] {
-        margin-right: 8px;
+      label {
+        cursor: pointer;
       }
 
-      label:has(input[type="checkbox"]) {
+      .option label {
         display: flex;
         align-items: center;
-        cursor: pointer;
+      }
+
+      input[type="checkbox"] {
+        margin-right: 8px;
       }
     `}});console.info("%c  THZ-CARD  \n%c  Version 1.0.0  ","color: orange; font-weight: bold; background: black","color: white; font-weight: bold; background: dimgray"),window.customCards=window.customCards||[],window.customCards.push({type:"thz-card",name:"THZ Card",description:"A custom card for controlling THZ heat pumps"});customElements.define("thz-card",class extends rt{static get properties(){return{hass:{type:Object},config:{type:Object}}}static getConfigElement(){return document.createElement("thz-card-editor")}static getStubConfig(){return{entity:"",name:"Heat Pump",show_temperature:!0,show_mode:!0,show_heating_circuit:!0,show_hot_water:!0}}setConfig(t){if(!t)throw new Error("Invalid configuration");this.config={name:"Heat Pump",show_temperature:!0,show_mode:!0,show_heating_circuit:!0,show_hot_water:!0,...t}}getCardSize(){return 5}shouldUpdate(t){return!!this.config}render(){if(!this.config||!this.hass)return W``;const t=(this.config.entity?this.hass.states[this.config.entity]:null)||{};return W`
       <ha-card>
@@ -245,7 +248,7 @@ const A=globalThis,w=t=>t,x=A.trustedTypes,E=x?x.createPolicy("lit-html",{create
             `})}
         </div>
       </div>
-    `}_findEntitiesByPattern(t,e=null){return this.hass?Object.keys(this.hass.states).filter(i=>{const s=this.hass.states[i];return!(!s.entity_id.includes("thz")&&"thz"!==s.attributes.integration)&&(!(e&&!i.startsWith(e+"."))&&(t.test(i)||t.test(s.attributes.friendly_name||"")))}):[]}_getEntityName(t){return t.attributes.friendly_name||t.entity_id.split(".")[1]}_handleSelectChange(t,e){this.hass.callService("select","select_option",{entity_id:t,option:e})}_handleSwitchToggle(t,e){const i=e?"turn_on":"turn_off";this.hass.callService("switch",i,{entity_id:t})}_handleNumberChange(t,e){this.hass.callService("number","set_value",{entity_id:t,value:parseFloat(e)})}static get styles(){return n`
+    `}_findEntitiesByPattern(t,e=null){return this.hass?Object.keys(this.hass.states).filter(i=>{const s=this.hass.states[i];return!(!i.includes("thz")&&"thz"!==s.attributes.integration)&&(!(e&&!i.startsWith(e+"."))&&(t.test(i)||t.test(s.attributes.friendly_name||"")))}):[]}_getEntityName(t){return t.attributes.friendly_name||t.entity_id.split(".")[1]}_handleSelectChange(t,e){this.hass.callService("select","select_option",{entity_id:t,option:e})}_handleSwitchToggle(t,e){const i=e?"turn_on":"turn_off";this.hass.callService("switch",i,{entity_id:t})}_handleNumberChange(t,e){this.hass.callService("number","set_value",{entity_id:t,value:parseFloat(e)})}static get styles(){return n`
       :host {
         display: block;
       }

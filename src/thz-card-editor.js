@@ -160,14 +160,17 @@ class ThzCardEditor extends LitElement {
         border-color: var(--primary-color);
       }
 
-      input[type="checkbox"] {
-        margin-right: 8px;
+      label {
+        cursor: pointer;
       }
 
-      label:has(input[type="checkbox"]) {
+      .option label {
         display: flex;
         align-items: center;
-        cursor: pointer;
+      }
+
+      input[type="checkbox"] {
+        margin-right: 8px;
       }
     `;
   }
