@@ -6,6 +6,12 @@ A custom card for Home Assistant to control THZ heat pumps.
 
 - 🌡️ Temperature monitoring with organized sensor grid
 - 📊 Temperature history graphs with customizable time range
+- 💨 Fan monitoring with dedicated graphs
+- 🔥 Heating details tracking (booster, pump, power)
+- ⚡ Energy consumption and efficiency (COP) monitoring
+- 📈 Statistics dashboard with key metrics
+- 🚦 Visual status indicators showing operational state
+- ⚠️ Automatic error and alert detection
 - 🔧 Operation mode control with dropdown selectors  
 - 🏠 Heating circuit control for temperature and settings
 - 💧 Hot water management and temperature control

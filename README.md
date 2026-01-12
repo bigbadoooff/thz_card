@@ -8,6 +8,10 @@ A custom card for Home Assistant to control THZ heat pumps. This card provides a
 - 📊 **Temperature Graphs**: Visual history graphs showing temperature trends over time
 - 💨 **Fan Monitoring**: Track fan values with dedicated graphs
 - 🔥 **Heating Details**: Monitor booster stage, heat circuit pump, and heating power with graphs
+- ⚡ **Energy & Efficiency**: Track power consumption and COP (Coefficient of Performance)
+- 📈 **Statistics Dashboard**: Quick view of key metrics like runtime, energy consumption, and COP
+- 🚦 **Status Indicators**: Visual badges showing current operational state (heating/cooling/idle/defrost)
+- ⚠️ **Error & Alert Monitoring**: Automatic detection and display of system errors and warnings
 - 🔧 **Operation Mode Control**: Easy switching between different operating modes
 - 🏠 **Heating Circuit Control**: Control heating circuit settings and temperatures
 - 💧 **Hot Water Management**: Monitor and control hot water settings
@@ -58,14 +62,18 @@ resources:
 | `name` | string | `Heat Pump` | Name displayed at the top of the card |
 | `device_id` | string | (optional) | Specific device ID to filter entities (use if auto-discovery doesn't work) |
 | `entity_filter` | string | (optional) | Filter string for entity IDs (e.g., "my_heatpump") |
+| `show_status` | boolean | `true` | Show status badge in header |
+| `show_statistics` | boolean | `true` | Show statistics dashboard with key metrics |
 | `show_temperature` | boolean | `true` | Show temperature sensors section |
 | `show_temperature_graph` | boolean | `true` | Show temperature history graph |
 | `show_fan_graph` | boolean | `true` | Show fan values history graph |
 | `show_heating_details_graph` | boolean | `true` | Show heating details (booster, pump, power) history graph |
+| `show_energy` | boolean | `true` | Show energy & efficiency section |
 | `graph_hours` | number | `24` | Number of hours to display in graphs (1-168) |
 | `show_mode` | boolean | `true` | Show operation mode controls |
 | `show_heating_circuit` | boolean | `true` | Show heating circuit controls |
 | `show_hot_water` | boolean | `true` | Show hot water controls |
+| `show_errors_always` | boolean | `false` | Always show error section even when no errors |
 
 **Auto-Discovery**: The card automatically discovers entities containing "thz", "tecalor", or "lwz" in their entity ID. If auto-discovery doesn't work for your setup, you can:
 - Use the device picker to select your heat pump device, OR
@@ -78,10 +86,13 @@ resources:
 ```yaml
 type: custom:thz-card
 name: My Heat Pump
+show_status: true
+show_statistics: true
 show_temperature: true
 show_temperature_graph: true
 show_fan_graph: true
 show_heating_details_graph: true
+show_energy: true
 graph_hours: 24
 show_mode: true
 show_heating_circuit: true
@@ -140,6 +151,38 @@ show_mode: true
 show_heating_circuit: true
 show_hot_water: true
 ```
+
+## What's New
+
+### Latest Enhancements
+
+The card now includes powerful new features to help you monitor and optimize your heat pump:
+
+- **📈 Statistics Dashboard**: Get a quick overview of key metrics at a glance
+  - Runtime tracking
+  - Energy consumption (daily/total)
+  - COP (Coefficient of Performance) with color-coded efficiency indicators
+  - Compressor status and statistics
+
+- **🚦 Status Badge**: Visual indicator in the header showing current operational state
+  - Heating mode 🔥
+  - Cooling mode ❄️
+  - Idle/Standby ⏸️
+  - Defrost cycle 🌨️
+  - System off ⭕
+
+- **⚡ Energy & Efficiency Section**: Dedicated area for monitoring power consumption and efficiency
+  - Real-time power usage
+  - Energy consumption tracking
+  - COP monitoring with visual feedback (excellent/good/poor)
+  - Helps identify optimization opportunities
+
+- **⚠️ Error & Alert Monitoring**: Automatic detection and prominent display of system issues
+  - Highlights active errors and warnings
+  - Shows "all clear" status when no issues detected
+  - Helps catch problems early
+
+These features are automatically enabled but can be individually toggled in the card configuration.
 
 ## Screenshots
 

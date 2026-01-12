@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import './thz-card-editor.js';
 
-const CARD_VERSION = '1.0.0';
+const CARD_VERSION = '1.1.0';
 
 console.info(
   `%c  THZ-CARD  \n%c  Version ${CARD_VERSION}  `,
@@ -47,6 +47,10 @@ class ThzCard extends LitElement {
       show_mode: true,
       show_heating_circuit: true,
       show_hot_water: true,
+      show_status: true,
+      show_energy: true,
+      show_statistics: true,
+      show_errors_always: false,
     };
   }
 
@@ -64,6 +68,10 @@ class ThzCard extends LitElement {
       show_mode: true,
       show_heating_circuit: true,
       show_hot_water: true,
+      show_status: true,
+      show_energy: true,
+      show_statistics: true,
+      show_errors_always: false,
       ...config,
     };
   }
@@ -88,11 +96,15 @@ class ThzCard extends LitElement {
       <ha-card>
         <div class="card-header">
           <div class="name">${this.config.name}</div>
+          ${this.config.show_status ? this._renderStatusBadge() : ''}
         </div>
         <div class="card-content">
+          ${this.config.show_statistics ? this._renderStatistics() : ''}
+          ${this._renderErrorSection()}
           ${this._renderTemperatureSection()}
           ${this._renderFanSection()}
           ${this._renderHeatingDetailsSection()}
+          ${this.config.show_energy ? this._renderEnergySection() : ''}
           ${this.config.show_mode ? this._renderModeSection() : ''}
           ${this.config.show_heating_circuit ? this._renderHeatingCircuitSection() : ''}
           ${this.config.show_hot_water ? this._renderHotWaterSection() : ''}
@@ -128,6 +140,135 @@ class ThzCard extends LitElement {
               </div>
             `;
           })}
+        </div>
+      </div>
+    `;
+  }
+
+  _renderStatusBadge() {
+    // Find status/state sensors
+    const statusSensors = this._findEntitiesByPattern(/state|status|mode|betrieb/i, 'sensor');
+    
+    if (statusSensors.length === 0) {
+      return html``;
+    }
+
+    const statusEntity = this.hass.states[statusSensors[0]];
+    if (!statusEntity) return html``;
+
+    const state = statusEntity.state;
+    let statusClass = 'status-unknown';
+    let statusIcon = '●';
+
+    // Determine status based on state value
+    if (/heat|heating|heizen/i.test(state)) {
+      statusClass = 'status-heating';
+      statusIcon = '🔥';
+    } else if (/cool|cooling|kühlen/i.test(state)) {
+      statusClass = 'status-cooling';
+      statusIcon = '❄️';
+    } else if (/idle|standby|bereit/i.test(state)) {
+      statusClass = 'status-idle';
+      statusIcon = '⏸️';
+    } else if (/defrost|abtau/i.test(state)) {
+      statusClass = 'status-defrost';
+      statusIcon = '🌨️';
+    } else if (/off|aus/i.test(state)) {
+      statusClass = 'status-off';
+      statusIcon = '⭕';
+    }
+
+    return html`
+      <div class="status-badge ${statusClass}">
+        <span class="status-icon">${statusIcon}</span>
+        <span class="status-text">${state}</span>
+      </div>
+    `;
+  }
+
+  _renderStatistics() {
+    // Find various statistics sensors
+    const runtimeSensors = this._findEntitiesByPattern(/runtime|laufzeit|operating.*time/i, 'sensor');
+    const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch/i, 'sensor');
+    const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad/i, 'sensor');
+    const compressorSensors = this._findEntitiesByPattern(/compressor|verdichter/i, 'sensor');
+
+    const stats = [];
+
+    // Add runtime stat
+    if (runtimeSensors.length > 0) {
+      const entity = this.hass.states[runtimeSensors[0]];
+      if (entity) {
+        stats.push({
+          name: 'Runtime',
+          icon: '⏱️',
+          value: entity.state,
+          unit: entity.attributes.unit_of_measurement || '',
+        });
+      }
+    }
+
+    // Add energy stat
+    if (energySensors.length > 0) {
+      const entity = this.hass.states[energySensors[0]];
+      if (entity) {
+        stats.push({
+          name: 'Energy Today',
+          icon: '⚡',
+          value: entity.state,
+          unit: entity.attributes.unit_of_measurement || '',
+        });
+      }
+    }
+
+    // Add COP stat
+    if (copSensors.length > 0) {
+      const entity = this.hass.states[copSensors[0]];
+      if (entity) {
+        const copValue = parseFloat(entity.state);
+        let copClass = 'cop-normal';
+        if (!isNaN(copValue)) {
+          if (copValue >= 4) copClass = 'cop-excellent';
+          else if (copValue >= 3) copClass = 'cop-good';
+          else if (copValue < 2) copClass = 'cop-poor';
+        }
+        stats.push({
+          name: 'COP',
+          icon: '📊',
+          value: entity.state,
+          unit: entity.attributes.unit_of_measurement || '',
+          className: copClass,
+        });
+      }
+    }
+
+    // Add compressor stat
+    if (compressorSensors.length > 0) {
+      const entity = this.hass.states[compressorSensors[0]];
+      if (entity) {
+        stats.push({
+          name: 'Compressor',
+          icon: '🔧',
+          value: entity.state,
+          unit: entity.attributes.unit_of_measurement || '',
+        });
+      }
+    }
+
+    if (stats.length === 0) return '';
+
+    return html`
+      <div class="statistics-section">
+        <div class="stats-grid">
+          ${stats.map(stat => html`
+            <div class="stat-item ${stat.className || ''}">
+              <div class="stat-icon">${stat.icon}</div>
+              <div class="stat-content">
+                <div class="stat-name">${stat.name}</div>
+                <div class="stat-value">${stat.value}${stat.unit}</div>
+              </div>
+            </div>
+          `)}
         </div>
       </div>
     `;
@@ -464,6 +605,54 @@ class ThzCard extends LitElement {
     `;
   }
 
+  _renderEnergySection() {
+    // Find energy and power related sensors
+    const powerSensors = this._findEntitiesByPattern(/power|leistung|watt/i, 'sensor');
+    const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch/i, 'sensor');
+    const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad/i, 'sensor');
+
+    // Combine and deduplicate sensors (some entities might match multiple patterns)
+    const allEnergySensors = [...new Set([...powerSensors, ...energySensors, ...copSensors])];
+
+    if (allEnergySensors.length === 0) {
+      return '';
+    }
+
+    return html`
+      <div class="section">
+        <div class="section-title">⚡ Energy & Efficiency</div>
+        <div class="sensor-grid">
+          ${allEnergySensors.slice(0, 6).map(entityId => {
+            const entity = this.hass.states[entityId];
+            if (!entity) return '';
+            
+            const name = this._getEntityName(entity);
+            const value = entity.state;
+            const unit = entity.attributes.unit_of_measurement || '';
+            
+            // Special highlighting for COP values
+            let className = 'sensor-item';
+            if (/cop|efficiency|wirkungsgrad/i.test(name)) {
+              const copValue = parseFloat(value);
+              if (!isNaN(copValue)) {
+                if (copValue >= 4) className += ' cop-excellent';
+                else if (copValue >= 3) className += ' cop-good';
+                else if (copValue < 2) className += ' cop-poor';
+              }
+            }
+            
+            return html`
+              <div class="${className}">
+                <div class="sensor-name">${name}</div>
+                <div class="sensor-value">${value}${unit}</div>
+              </div>
+            `;
+          })}
+        </div>
+      </div>
+    `;
+  }
+
   _renderHeatingDetailsGraph(heatingDetailSensors) {
     const sensorsToGraph = heatingDetailSensors.slice(0, 4);
     
@@ -693,6 +882,73 @@ class ThzCard extends LitElement {
     `;
   }
 
+  _renderErrorSection() {
+    // Find error, alarm, or fault related sensors
+    const errorPattern = /error|alarm|fault|fehler|st[öo]rung|warnung/i;
+    const errorSensors = this._findEntitiesByPattern(errorPattern, 'sensor');
+    const errorBinarySensors = this._findEntitiesByPattern(errorPattern, 'binary_sensor');
+    
+    const allErrorEntities = [...errorSensors, ...errorBinarySensors];
+    
+    if (allErrorEntities.length === 0) return '';
+
+    // Check if any errors are active
+    const activeErrors = allErrorEntities.filter(entityId => {
+      const entity = this.hass.states[entityId];
+      if (!entity) return false;
+      
+      return this._isErrorState(entity.state);
+    });
+
+    // Only show section if there are errors or if configured to always show
+    if (activeErrors.length === 0 && !this.config.show_errors_always) {
+      return '';
+    }
+
+    const hasErrors = activeErrors.length > 0;
+
+    return html`
+      <div class="section error-section ${hasErrors ? 'has-errors' : ''}">
+        <div class="section-title">
+          ${hasErrors ? '⚠️ Alerts & Errors' : '✓ System Status'}
+        </div>
+        ${!hasErrors ? html`
+          <div class="no-errors">
+            <span class="success-icon">✓</span>
+            <span>No errors or warnings detected</span>
+          </div>
+        ` : html`
+          <div class="error-list">
+            ${activeErrors.map(entityId => {
+              const entity = this.hass.states[entityId];
+              if (!entity) return '';
+              
+              const name = this._getEntityName(entity);
+              const value = entity.state;
+              
+              return html`
+                <div class="error-item">
+                  <div class="error-icon">⚠️</div>
+                  <div class="error-content">
+                    <div class="error-name">${name}</div>
+                    <div class="error-value">${value}</div>
+                  </div>
+                </div>
+              `;
+            })}
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+  _isErrorState(state) {
+    const lowerState = state.toLowerCase();
+    // Check for explicit error/alarm states
+    const errorStates = ['on', 'true', 'active', 'problem', 'alarm', 'error', 'fault'];
+    return errorStates.includes(lowerState);
+  }
+
   _findEntitiesByPattern(pattern, domain = null) {
     if (!this.hass) return [];
     
@@ -795,6 +1051,132 @@ class ThzCard extends LitElement {
         font-size: 24px;
         font-weight: 500;
         color: var(--primary-text-color);
+      }
+
+      /* Status Badge Styles */
+      .status-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 2px solid transparent;
+      }
+
+      .status-heating {
+        background: rgba(255, 87, 34, 0.15);
+        border-color: #ff5722;
+        color: #ff5722;
+      }
+
+      .status-cooling {
+        background: rgba(33, 150, 243, 0.15);
+        border-color: #2196f3;
+        color: #2196f3;
+      }
+
+      .status-idle {
+        background: rgba(158, 158, 158, 0.15);
+        border-color: #9e9e9e;
+        color: #9e9e9e;
+      }
+
+      .status-defrost {
+        background: rgba(3, 169, 244, 0.15);
+        border-color: #03a9f4;
+        color: #03a9f4;
+      }
+
+      .status-off {
+        background: rgba(117, 117, 117, 0.15);
+        border-color: #757575;
+        color: #757575;
+      }
+
+      .status-unknown {
+        background: rgba(158, 158, 158, 0.15);
+        border-color: #9e9e9e;
+        color: var(--primary-text-color);
+      }
+
+      .status-icon {
+        font-size: 16px;
+      }
+
+      /* Statistics Section Styles */
+      .statistics-section {
+        margin-bottom: 20px;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+      }
+
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        background: var(--secondary-background-color);
+        border-radius: 8px;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+      }
+
+      .stat-icon {
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .stat-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .stat-name {
+        font-size: 12px;
+        color: var(--secondary-text-color);
+        margin-bottom: 4px;
+      }
+
+      .stat-value {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--primary-text-color);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .cop-excellent {
+        border-color: #4caf50;
+        background: rgba(76, 175, 80, 0.1);
+      }
+
+      .cop-excellent .stat-value {
+        color: #4caf50;
+      }
+
+      .cop-good {
+        border-color: #8bc34a;
+        background: rgba(139, 195, 74, 0.1);
+      }
+
+      .cop-good .stat-value {
+        color: #8bc34a;
+      }
+
+      .cop-poor {
+        border-color: #ff9800;
+        background: rgba(255, 152, 0, 0.1);
+      }
+
+      .cop-poor .stat-value {
+        color: #ff9800;
       }
 
       .card-content {
@@ -1014,10 +1396,80 @@ class ThzCard extends LitElement {
         font-size: 14px;
       }
 
+      /* Error Section Styles */
+      .error-section {
+        border-color: var(--divider-color);
+      }
+
+      .error-section.has-errors {
+        border-color: #ff9800;
+        border-width: 2px;
+        background: rgba(255, 152, 0, 0.05);
+      }
+
+      .no-errors {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px;
+        color: #4caf50;
+        font-size: 14px;
+        justify-content: center;
+        background: rgba(76, 175, 80, 0.05);
+        border-radius: 4px;
+      }
+
+      .success-icon {
+        font-size: 20px;
+        font-weight: bold;
+      }
+
+      .error-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .error-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px;
+        background: rgba(255, 152, 0, 0.1);
+        border: 1px solid #ff9800;
+        border-radius: 4px;
+      }
+
+      .error-icon {
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .error-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .error-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--primary-text-color);
+        margin-bottom: 4px;
+      }
+
+      .error-value {
+        font-size: 13px;
+        color: var(--secondary-text-color);
+      }
+
       @media (max-width: 600px) {
         .sensor-grid,
         .control-grid {
           grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
         }
       }
     `;
