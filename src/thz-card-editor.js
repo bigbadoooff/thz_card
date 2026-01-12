@@ -167,6 +167,16 @@ class ThzCardEditor extends LitElement {
             Show Energy & Efficiency Section
           </label>
         </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this.config.show_errors_always === true}
+              @change=${this._toggleErrorsAlways}>
+            Always Show Error Section (even when no errors)
+          </label>
+        </div>
       </div>
     `;
   }
@@ -255,6 +265,12 @@ class ThzCardEditor extends LitElement {
   _toggleEnergy(ev) {
     const newConfig = { ...this.config };
     newConfig.show_energy = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _toggleErrorsAlways(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_errors_always = ev.target.checked;
     this._updateConfig(newConfig);
   }
 

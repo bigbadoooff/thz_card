@@ -169,8 +169,18 @@ const x=globalThis,w=t=>t,S=x.trustedTypes,E=S?S.createPolicy("lit-html",{create
             Show Energy & Efficiency Section
           </label>
         </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${!0===this.config.show_errors_always}
+              @change=${this._toggleErrorsAlways}>
+            Always Show Error Section (even when no errors)
+          </label>
+        </div>
       </div>
-    `:j``}_deviceChanged(t){const e={...this.config};e.device_id=t.detail.value,this._updateConfig(e)}_entityFilterChanged(t){const e={...this.config};e.entity_filter=t.target.value,this._updateConfig(e)}_nameChanged(t){const e={...this.config};e.name=t.target.value,this._updateConfig(e)}_toggleTemperature(t){const e={...this.config};e.show_temperature=t.target.checked,this._updateConfig(e)}_toggleTemperatureGraph(t){const e={...this.config};e.show_temperature_graph=t.target.checked,this._updateConfig(e)}_toggleFanGraph(t){const e={...this.config};e.show_fan_graph=t.target.checked,this._updateConfig(e)}_toggleHeatingDetailsGraph(t){const e={...this.config};e.show_heating_details_graph=t.target.checked,this._updateConfig(e)}_graphHoursChanged(t){const e={...this.config},s=parseInt(t.target.value);!isNaN(s)&&s>=1&&s<=168&&(e.graph_hours=s,this._updateConfig(e))}_toggleMode(t){const e={...this.config};e.show_mode=t.target.checked,this._updateConfig(e)}_toggleHeatingCircuit(t){const e={...this.config};e.show_heating_circuit=t.target.checked,this._updateConfig(e)}_toggleHotWater(t){const e={...this.config};e.show_hot_water=t.target.checked,this._updateConfig(e)}_toggleStatus(t){const e={...this.config};e.show_status=t.target.checked,this._updateConfig(e)}_toggleStatistics(t){const e={...this.config};e.show_statistics=t.target.checked,this._updateConfig(e)}_toggleEnergy(t){const e={...this.config};e.show_energy=t.target.checked,this._updateConfig(e)}_updateConfig(t){const e=new CustomEvent("config-changed",{detail:{config:t},bubbles:!0,composed:!0});this.dispatchEvent(e)}static get styles(){return o`
+    `:j``}_deviceChanged(t){const e={...this.config};e.device_id=t.detail.value,this._updateConfig(e)}_entityFilterChanged(t){const e={...this.config};e.entity_filter=t.target.value,this._updateConfig(e)}_nameChanged(t){const e={...this.config};e.name=t.target.value,this._updateConfig(e)}_toggleTemperature(t){const e={...this.config};e.show_temperature=t.target.checked,this._updateConfig(e)}_toggleTemperatureGraph(t){const e={...this.config};e.show_temperature_graph=t.target.checked,this._updateConfig(e)}_toggleFanGraph(t){const e={...this.config};e.show_fan_graph=t.target.checked,this._updateConfig(e)}_toggleHeatingDetailsGraph(t){const e={...this.config};e.show_heating_details_graph=t.target.checked,this._updateConfig(e)}_graphHoursChanged(t){const e={...this.config},s=parseInt(t.target.value);!isNaN(s)&&s>=1&&s<=168&&(e.graph_hours=s,this._updateConfig(e))}_toggleMode(t){const e={...this.config};e.show_mode=t.target.checked,this._updateConfig(e)}_toggleHeatingCircuit(t){const e={...this.config};e.show_heating_circuit=t.target.checked,this._updateConfig(e)}_toggleHotWater(t){const e={...this.config};e.show_hot_water=t.target.checked,this._updateConfig(e)}_toggleStatus(t){const e={...this.config};e.show_status=t.target.checked,this._updateConfig(e)}_toggleStatistics(t){const e={...this.config};e.show_statistics=t.target.checked,this._updateConfig(e)}_toggleEnergy(t){const e={...this.config};e.show_energy=t.target.checked,this._updateConfig(e)}_toggleErrorsAlways(t){const e={...this.config};e.show_errors_always=t.target.checked,this._updateConfig(e)}_updateConfig(t){const e=new CustomEvent("config-changed",{detail:{config:t},bubbles:!0,composed:!0});this.dispatchEvent(e)}static get styles(){return o`
       .card-config {
         display: flex;
         flex-direction: column;
@@ -547,14 +557,14 @@ const x=globalThis,w=t=>t,S=x.trustedTypes,E=S?S.createPolicy("lit-html",{create
             `})}
         </div>
       </div>
-    `}_renderErrorSection(){const t=[...this._findEntitiesByPattern(/error|alarm|fault|fehler|st[öo]rung|warnung/i,"sensor"),...this._findEntitiesByPattern(/error|alarm|fault|fehler|st[öo]rung|warnung/i,"binary_sensor")];if(0===t.length)return"";const e=t.filter(t=>{const e=this.hass.states[t];if(!e)return!1;const s=e.state.toLowerCase();return"on"===s||"true"===s||"active"===s||"problem"===s||"alarm"===s||"off"!==s&&"false"!==s&&"ok"!==s&&"none"!==s&&"unknown"!==s&&"0"!==s});if(0===e.length&&!this.config.show_errors_always)return"";const s=e.length>0;return j`
-      <div class="section error-section ${s?"has-errors":""}">
+    `}_renderErrorSection(){const t=/error|alarm|fault|fehler|st[öo]rung|warnung/i,e=[...this._findEntitiesByPattern(t,"sensor"),...this._findEntitiesByPattern(t,"binary_sensor")];if(0===e.length)return"";const s=e.filter(t=>{const e=this.hass.states[t];return!!e&&this._isErrorState(e.state)});if(0===s.length&&!this.config.show_errors_always)return"";const i=s.length>0;return j`
+      <div class="section error-section ${i?"has-errors":""}">
         <div class="section-title">
-          ${s?"⚠️ Alerts & Errors":"✓ System Status"}
+          ${i?"⚠️ Alerts & Errors":"✓ System Status"}
         </div>
-        ${s?j`
+        ${i?j`
           <div class="error-list">
-            ${e.map(t=>{const e=this.hass.states[t];if(!e)return"";const s=this._getEntityName(e),i=e.state;return j`
+            ${s.map(t=>{const e=this.hass.states[t];if(!e)return"";const s=this._getEntityName(e),i=e.state;return j`
                 <div class="error-item">
                   <div class="error-icon">⚠️</div>
                   <div class="error-content">
@@ -571,7 +581,7 @@ const x=globalThis,w=t=>t,S=x.trustedTypes,E=S?S.createPolicy("lit-html",{create
           </div>
         `}
       </div>
-    `}_findEntitiesByPattern(t,e=null){if(!this.hass)return[];let s=null;return this.config.device_id&&this.hass.devices&&this.hass.entities&&(s=Object.entries(this.hass.entities).filter(([t,e])=>e.device_id===this.config.device_id).map(([t])=>t)),Object.entries(this.hass.states).filter(([i,r])=>{if(!r||!r.attributes)return!1;if(s&&!s.includes(i))return!1;if(this.config.entity_filter&&!i.toLowerCase().includes(this.config.entity_filter.toLowerCase()))return!1;return!!(this.config.entity_filter||this.config.device_id||i.toLowerCase().includes("thz")||i.toLowerCase().includes("tecalor")||i.toLowerCase().includes("lwz")||"thz"===r.attributes.integration||r.attributes.device_class&&JSON.stringify(r.attributes).toLowerCase().includes("thz"))&&(!(e&&!i.startsWith(e+"."))&&(t.test(i)||t.test(r.attributes.friendly_name||"")))}).map(([t])=>t)}_getEntityName(t){return t.attributes.friendly_name||t.entity_id?.split?.(".")[1]||"Unknown"}_handleSelectChange(t,e){this.hass.callService("select","select_option",{entity_id:t,option:e})}_handleSwitchToggle(t,e){const s=e?"turn_on":"turn_off";this.hass.callService("switch",s,{entity_id:t})}_handleNumberChange(t,e){const s=parseFloat(e);isNaN(s)||this.hass.callService("number","set_value",{entity_id:t,value:s})}static get styles(){return o`
+    `}_isErrorState(t){const e=t.toLowerCase();if(["on","true","active","problem","alarm"].includes(e))return!0;return!["off","false","ok","none","unknown","0"].includes(e)}_findEntitiesByPattern(t,e=null){if(!this.hass)return[];let s=null;return this.config.device_id&&this.hass.devices&&this.hass.entities&&(s=Object.entries(this.hass.entities).filter(([t,e])=>e.device_id===this.config.device_id).map(([t])=>t)),Object.entries(this.hass.states).filter(([i,r])=>{if(!r||!r.attributes)return!1;if(s&&!s.includes(i))return!1;if(this.config.entity_filter&&!i.toLowerCase().includes(this.config.entity_filter.toLowerCase()))return!1;return!!(this.config.entity_filter||this.config.device_id||i.toLowerCase().includes("thz")||i.toLowerCase().includes("tecalor")||i.toLowerCase().includes("lwz")||"thz"===r.attributes.integration||r.attributes.device_class&&JSON.stringify(r.attributes).toLowerCase().includes("thz"))&&(!(e&&!i.startsWith(e+"."))&&(t.test(i)||t.test(r.attributes.friendly_name||"")))}).map(([t])=>t)}_getEntityName(t){return t.attributes.friendly_name||t.entity_id?.split?.(".")[1]||"Unknown"}_handleSelectChange(t,e){this.hass.callService("select","select_option",{entity_id:t,option:e})}_handleSwitchToggle(t,e){const s=e?"turn_on":"turn_off";this.hass.callService("switch",s,{entity_id:t})}_handleNumberChange(t,e){const s=parseFloat(e);isNaN(s)||this.hass.callService("number","set_value",{entity_id:t,value:s})}static get styles(){return o`
       :host {
         display: block;
       }

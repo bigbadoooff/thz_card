@@ -883,8 +883,9 @@ class ThzCard extends LitElement {
 
   _renderErrorSection() {
     // Find error, alarm, or fault related sensors
-    const errorSensors = this._findEntitiesByPattern(/error|alarm|fault|fehler|st[öo]rung|warnung/i, 'sensor');
-    const errorBinarySensors = this._findEntitiesByPattern(/error|alarm|fault|fehler|st[öo]rung|warnung/i, 'binary_sensor');
+    const errorPattern = /error|alarm|fault|fehler|st[öo]rung|warnung/i;
+    const errorSensors = this._findEntitiesByPattern(errorPattern, 'sensor');
+    const errorBinarySensors = this._findEntitiesByPattern(errorPattern, 'binary_sensor');
     
     const allErrorEntities = [...errorSensors, ...errorBinarySensors];
     
@@ -895,13 +896,7 @@ class ThzCard extends LitElement {
       const entity = this.hass.states[entityId];
       if (!entity) return false;
       
-      const state = entity.state.toLowerCase();
-      return state === 'on' || 
-             state === 'true' || 
-             state === 'active' || 
-             state === 'problem' ||
-             state === 'alarm' ||
-             (state !== 'off' && state !== 'false' && state !== 'ok' && state !== 'none' && state !== 'unknown' && state !== '0');
+      return this._isErrorState(entity.state);
     });
 
     // Only show section if there are errors or if configured to always show
@@ -944,6 +939,17 @@ class ThzCard extends LitElement {
         `}
       </div>
     `;
+  }
+
+  _isErrorState(state) {
+    const lowerState = state.toLowerCase();
+    // Check for active error states
+    const activeStates = ['on', 'true', 'active', 'problem', 'alarm'];
+    if (activeStates.includes(lowerState)) return true;
+    
+    // Check for non-error states (anything else is considered an error)
+    const okStates = ['off', 'false', 'ok', 'none', 'unknown', '0'];
+    return !okStates.includes(lowerState);
   }
 
   _findEntitiesByPattern(pattern, domain = null) {
