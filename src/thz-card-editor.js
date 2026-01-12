@@ -19,20 +19,16 @@ class ThzCardEditor extends LitElement {
 
     return html`
       <div class="card-config">
-        <div class="option">
-          <label for="entity">Entity (optional - auto-discover THZ entities)</label>
-          <ha-entity-picker
-            id="entity"
-            .hass=${this.hass}
-            .value=${this.config.entity || ''}
-            @value-changed=${this._entityChanged}
-            allow-custom-entity
-            placeholder="Leave empty to auto-discover">
-          </ha-entity-picker>
+        <div class="info-box">
+          <div class="info-title">ℹ️ Auto-Discovery</div>
+          <div class="info-text">
+            This card automatically discovers and displays all THZ entities from your heat pump.
+            No entity selection needed - just configure display options below.
+          </div>
         </div>
 
         <div class="option">
-          <label for="name">Name</label>
+          <label for="name">Card Name</label>
           <input
             id="name"
             type="text"
@@ -104,12 +100,6 @@ class ThzCardEditor extends LitElement {
     `;
   }
 
-  _entityChanged(ev) {
-    const newConfig = { ...this.config };
-    newConfig.entity = ev.detail.value;
-    this._updateConfig(newConfig);
-  }
-
   _nameChanged(ev) {
     const newConfig = { ...this.config };
     newConfig.name = ev.target.value;
@@ -171,6 +161,27 @@ class ThzCardEditor extends LitElement {
         flex-direction: column;
         gap: 16px;
         padding: 16px;
+      }
+
+      .info-box {
+        background: var(--secondary-background-color);
+        border-left: 4px solid var(--primary-color);
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+      }
+
+      .info-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary-text-color);
+        margin-bottom: 8px;
+      }
+
+      .info-text {
+        font-size: 13px;
+        color: var(--secondary-text-color);
+        line-height: 1.5;
       }
 
       .option {

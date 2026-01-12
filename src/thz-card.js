@@ -38,7 +38,6 @@ class ThzCard extends LitElement {
 
   static getStubConfig() {
     return {
-      entity: '',
       name: 'Heat Pump',
       show_temperature: true,
       show_temperature_graph: true,
@@ -81,26 +80,23 @@ class ThzCard extends LitElement {
       return html``;
     }
 
-    const entity = this.config.entity ? this.hass.states[this.config.entity] : null;
-    const stateObj = entity || {};
-
     return html`
       <ha-card>
         <div class="card-header">
           <div class="name">${this.config.name}</div>
         </div>
         <div class="card-content">
-          ${this._renderTemperatureSection(stateObj)}
-          ${this.config.show_mode ? this._renderModeSection(stateObj) : ''}
-          ${this.config.show_heating_circuit ? this._renderHeatingCircuitSection(stateObj) : ''}
-          ${this.config.show_hot_water ? this._renderHotWaterSection(stateObj) : ''}
-          ${this._renderAdditionalControls(stateObj)}
+          ${this._renderTemperatureSection()}
+          ${this.config.show_mode ? this._renderModeSection() : ''}
+          ${this.config.show_heating_circuit ? this._renderHeatingCircuitSection() : ''}
+          ${this.config.show_hot_water ? this._renderHotWaterSection() : ''}
+          ${this._renderAdditionalControls()}
         </div>
       </ha-card>
     `;
   }
 
-  _renderTemperatureSection(stateObj) {
+  _renderTemperatureSection() {
     if (!this.config.show_temperature) return '';
 
     // Find temperature sensors
@@ -354,7 +350,7 @@ class ThzCard extends LitElement {
     }
   }
 
-  _renderModeSection(stateObj) {
+  _renderModeSection() {
     // Find mode/operation related entities
     const modeSelects = this._findEntitiesByPattern(/mode|betriebsart/i, 'select');
     
@@ -390,7 +386,7 @@ class ThzCard extends LitElement {
     `;
   }
 
-  _renderHeatingCircuitSection(stateObj) {
+  _renderHeatingCircuitSection() {
     // Find heating circuit related entities
     const hcNumbers = this._findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'number');
     const hcSwitches = this._findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'switch');
@@ -449,7 +445,7 @@ class ThzCard extends LitElement {
     `;
   }
 
-  _renderHotWaterSection(stateObj) {
+  _renderHotWaterSection() {
     // Find hot water related entities
     const dhwSwitches = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'switch');
     const dhwNumbers = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'number');
@@ -508,7 +504,7 @@ class ThzCard extends LitElement {
     `;
   }
 
-  _renderAdditionalControls(stateObj) {
+  _renderAdditionalControls() {
     // Find any remaining important switches
     const otherSwitches = this._findEntitiesByPattern(/cooling|emergency|party|holiday/i, 'switch');
     

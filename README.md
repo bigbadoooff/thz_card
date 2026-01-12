@@ -54,13 +54,14 @@ resources:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `name` | string | `Heat Pump` | Name displayed at the top of the card |
-| `entity` | string | (optional) | Specific entity to monitor (auto-discovery used if empty) |
 | `show_temperature` | boolean | `true` | Show temperature sensors section |
 | `show_temperature_graph` | boolean | `true` | Show temperature history graph |
 | `graph_hours` | number | `24` | Number of hours to display in temperature graph (1-168) |
 | `show_mode` | boolean | `true` | Show operation mode controls |
 | `show_heating_circuit` | boolean | `true` | Show heating circuit controls |
 | `show_hot_water` | boolean | `true` | Show hot water controls |
+
+**Note**: The card automatically discovers all THZ entities from your heat pump. No manual entity selection is required.
 
 ### Example Configuration
 
