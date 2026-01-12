@@ -19,18 +19,37 @@ class ThzCardEditor extends LitElement {
 
     return html`
       <div class="card-config">
-        <div class="option">
-          <label for="entity">Entity (optional - auto-discover THZ entities)</label>
-          <input
-            id="entity"
-            type="text"
-            .value=${this.config.entity || ''}
-            @change=${this._entityChanged}
-            placeholder="Leave empty to auto-discover">
+        <div class="info-box">
+          <div class="info-title">ℹ️ Auto-Discovery</div>
+          <div class="info-text">
+            This card automatically discovers THZ/Tecalor/LWZ heat pump entities.
+            If auto-discovery doesn't work, specify a device or entity filter below.
+          </div>
         </div>
 
         <div class="option">
-          <label for="name">Name</label>
+          <label for="device">Device (optional - for manual selection)</label>
+          <ha-device-picker
+            id="device"
+            .hass=${this.hass}
+            .value=${this.config.device_id || ''}
+            @value-changed=${this._deviceChanged}
+            allow-custom-entity>
+          </ha-device-picker>
+        </div>
+
+        <div class="option">
+          <label for="entity_filter">Entity Filter (optional - e.g., "my_heatpump")</label>
+          <input
+            id="entity_filter"
+            type="text"
+            .value=${this.config.entity_filter || ''}
+            @change=${this._entityFilterChanged}
+            placeholder="Leave empty for auto-discovery">
+        </div>
+
+        <div class="option">
+          <label for="name">Card Name</label>
           <input
             id="name"
             type="text"
@@ -46,6 +65,47 @@ class ThzCardEditor extends LitElement {
               @change=${this._toggleTemperature}>
             Show Temperature Section
           </label>
+        </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this.config.show_temperature_graph !== false}
+              @change=${this._toggleTemperatureGraph}>
+            Show Temperature Graph
+          </label>
+        </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this.config.show_fan_graph !== false}
+              @change=${this._toggleFanGraph}>
+            Show Fan Graph
+          </label>
+        </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this.config.show_heating_details_graph !== false}
+              @change=${this._toggleHeatingDetailsGraph}>
+            Show Heating Details Graph
+          </label>
+        </div>
+
+        <div class="option">
+          <label for="graph_hours">Graph Time Range (hours)</label>
+          <input
+            id="graph_hours"
+            type="number"
+            min="1"
+            max="168"
+            .value=${this.config.graph_hours || 24}
+            @change=${this._graphHoursChanged}>
         </div>
 
         <div class="option">
@@ -81,9 +141,15 @@ class ThzCardEditor extends LitElement {
     `;
   }
 
-  _entityChanged(ev) {
+  _deviceChanged(ev) {
     const newConfig = { ...this.config };
-    newConfig.entity = ev.target.value;
+    newConfig.device_id = ev.detail.value;
+    this._updateConfig(newConfig);
+  }
+
+  _entityFilterChanged(ev) {
+    const newConfig = { ...this.config };
+    newConfig.entity_filter = ev.target.value;
     this._updateConfig(newConfig);
   }
 
@@ -97,6 +163,33 @@ class ThzCardEditor extends LitElement {
     const newConfig = { ...this.config };
     newConfig.show_temperature = ev.target.checked;
     this._updateConfig(newConfig);
+  }
+
+  _toggleTemperatureGraph(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_temperature_graph = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _toggleFanGraph(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_fan_graph = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _toggleHeatingDetailsGraph(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_heating_details_graph = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _graphHoursChanged(ev) {
+    const newConfig = { ...this.config };
+    const hours = parseInt(ev.target.value);
+    if (!isNaN(hours) && hours >= 1 && hours <= 168) {
+      newConfig.graph_hours = hours;
+      this._updateConfig(newConfig);
+    }
   }
 
   _toggleMode(ev) {
@@ -135,6 +228,27 @@ class ThzCardEditor extends LitElement {
         padding: 16px;
       }
 
+      .info-box {
+        background: var(--secondary-background-color);
+        border-left: 4px solid var(--primary-color);
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+      }
+
+      .info-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary-text-color);
+        margin-bottom: 8px;
+      }
+
+      .info-text {
+        font-size: 13px;
+        color: var(--secondary-text-color);
+        line-height: 1.5;
+      }
+
       .option {
         display: flex;
         flex-direction: column;
@@ -164,6 +278,28 @@ class ThzCardEditor extends LitElement {
       input[type="text"]:focus {
         outline: none;
         border-color: var(--primary-color);
+      }
+
+      input[type="number"] {
+        padding: 8px;
+        border: 1px solid var(--divider-color);
+        border-radius: 4px;
+        background: var(--secondary-background-color);
+        color: var(--primary-text-color);
+        font-size: 14px;
+      }
+
+      input[type="number"]:focus {
+        outline: none;
+        border-color: var(--primary-color);
+      }
+
+      ha-entity-picker {
+        width: 100%;
+      }
+
+      ha-device-picker {
+        width: 100%;
       }
 
       input[type="checkbox"] {
