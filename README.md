@@ -169,7 +169,7 @@ The card now includes powerful new features to help you monitor and optimize you
   - Cooling mode ❄️
   - Idle/Standby ⏸️
   - Defrost cycle 🌨️
-  - System off ⭘
+  - System off ⭕
 
 - **⚡ Energy & Efficiency Section**: Dedicated area for monitoring power consumption and efficiency
   - Real-time power usage
