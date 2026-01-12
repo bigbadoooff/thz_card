@@ -29,6 +29,7 @@ class ThzCard extends LitElement {
   constructor() {
     super();
     this._historyData = {};
+    this._loadingHistory = false;
   }
 
   static getConfigElement() {
@@ -134,13 +135,18 @@ class ThzCard extends LitElement {
     // Limit to first 4 sensors for cleaner graph
     const sensorsToGraph = tempSensors.slice(0, 4);
     
+    // Early return if no sensors to graph
+    if (sensorsToGraph.length === 0) {
+      return '';
+    }
+    
     // Load history data when component is first rendered
     if (!this._historyData[sensorsToGraph[0]]) {
       this._loadHistoryData(sensorsToGraph);
     }
 
-    // Define colors for different sensors
-    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#6c5ce7', '#a29bfe'];
+    // Define colors for different sensors (matching 4 sensor limit)
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24'];
     
     return html`
       <div class="temperature-graph">
@@ -211,10 +217,25 @@ class ThzCard extends LitElement {
       });
     });
 
-    // Add some padding to min/max
-    const tempRange = maxTemp - minTemp;
-    minTemp = Math.floor(minTemp - tempRange * 0.1);
-    maxTemp = Math.ceil(maxTemp + tempRange * 0.1);
+    // Handle edge case: no valid data points
+    if (!isFinite(minTemp) || !isFinite(maxTemp)) {
+      return html`
+        <div class="graph-loading">
+          No temperature data available
+        </div>
+      `;
+    }
+
+    // Handle edge case: all temperatures are the same
+    if (minTemp === maxTemp) {
+      minTemp = minTemp - 1;
+      maxTemp = maxTemp + 1;
+    } else {
+      // Add some padding to min/max
+      const tempRange = maxTemp - minTemp;
+      minTemp = Math.floor(minTemp - tempRange * 0.1);
+      maxTemp = Math.ceil(maxTemp + tempRange * 0.1);
+    }
 
     // Generate Y-axis labels (temperature)
     const yAxisLabels = [];
@@ -293,6 +314,12 @@ class ThzCard extends LitElement {
   }
 
   async _loadHistoryData(entityIds) {
+    // Prevent concurrent loading
+    if (this._loadingHistory) {
+      return;
+    }
+    
+    this._loadingHistory = true;
     const hours = this.config.graph_hours || 24;
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - hours * 60 * 60 * 1000);
@@ -310,17 +337,11 @@ class ThzCard extends LitElement {
           });
 
           if (history && history[0]) {
-            this._historyData = {
-              ...this._historyData,
-              [entityId]: history[0],
-            };
+            this._historyData[entityId] = history[0];
           }
         } catch (err) {
           console.error(`Failed to load history for ${entityId}:`, err);
-          this._historyData = {
-            ...this._historyData,
-            [entityId]: [],
-          };
+          this._historyData[entityId] = [];
         }
       });
 
@@ -328,6 +349,8 @@ class ThzCard extends LitElement {
       this.requestUpdate();
     } catch (error) {
       console.error('Failed to load history data:', error);
+    } finally {
+      this._loadingHistory = false;
     }
   }
 
