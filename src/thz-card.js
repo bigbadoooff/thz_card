@@ -309,26 +309,28 @@ class ThzCard extends LitElement {
   _findEntitiesByPattern(pattern, domain = null) {
     if (!this.hass) return [];
     
-    return Object.keys(this.hass.states).filter(entityId => {
-      // Check if it belongs to the thz integration or matches pattern
-      const entity = this.hass.states[entityId];
-      if (!entity || !entity.attributes) return false;
-      
-      const matchesTHZ = entityId.includes('thz') || 
-                        entity.attributes.integration === 'thz';
-      
-      if (!matchesTHZ) return false;
-      
-      // Check domain if specified
-      if (domain && !entityId.startsWith(domain + '.')) return false;
-      
-      // Check pattern
-      return pattern.test(entityId) || pattern.test(entity.attributes.friendly_name || '');
-    });
+    return Object.entries(this.hass.states)
+      .filter(([entityId, entity]) => {
+        // Check if entity has required attributes
+        if (!entity || !entity.attributes) return false;
+        
+        // Check if it belongs to the thz integration or matches pattern
+        const matchesTHZ = entityId.includes('thz') || 
+                          entity.attributes.integration === 'thz';
+        
+        if (!matchesTHZ) return false;
+        
+        // Check domain if specified
+        if (domain && !entityId.startsWith(domain + '.')) return false;
+        
+        // Check pattern
+        return pattern.test(entityId) || pattern.test(entity.attributes.friendly_name || '');
+      })
+      .map(([entityId]) => entityId);
   }
 
   _getEntityName(entity) {
-    return entity.attributes.friendly_name || entity.entity_id.split('.')[1];
+    return entity.attributes.friendly_name || entity.entity_id?.split?.('.')[1] || 'Unknown';
   }
 
   _handleSelectChange(entityId, value) {
@@ -346,9 +348,12 @@ class ThzCard extends LitElement {
   }
 
   _handleNumberChange(entityId, value) {
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return;
+    
     this.hass.callService('number', 'set_value', {
       entity_id: entityId,
-      value: parseFloat(value),
+      value: numValue,
     });
   }
 
