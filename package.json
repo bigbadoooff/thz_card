@@ -1,6 +1,6 @@
 {
   "name": "thz-card",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A custom card for Home Assistant to control THZ heat pumps",
   "main": "dist/thz-card.js",
   "scripts": {

@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import './thz-card-editor.js';
 
-const CARD_VERSION = '1.0.0';
+const CARD_VERSION = '1.1.0';
 
 console.info(
   `%c  THZ-CARD  \n%c  Version ${CARD_VERSION}  `,
@@ -98,6 +98,7 @@ class ThzCard extends LitElement {
         </div>
         <div class="card-content">
           ${this.config.show_statistics ? this._renderStatistics() : ''}
+          ${this._renderErrorSection()}
           ${this._renderTemperatureSection()}
           ${this._renderFanSection()}
           ${this._renderHeatingDetailsSection()}
@@ -878,6 +879,69 @@ class ThzCard extends LitElement {
     `;
   }
 
+  _renderErrorSection() {
+    // Find error, alarm, or fault related sensors
+    const errorSensors = this._findEntitiesByPattern(/error|alarm|fault|fehler|st[öo]rung|warnung/i, 'sensor');
+    const errorBinarySensors = this._findEntitiesByPattern(/error|alarm|fault|fehler|st[öo]rung|warnung/i, 'binary_sensor');
+    
+    const allErrorEntities = [...errorSensors, ...errorBinarySensors];
+    
+    if (allErrorEntities.length === 0) return '';
+
+    // Check if any errors are active
+    const activeErrors = allErrorEntities.filter(entityId => {
+      const entity = this.hass.states[entityId];
+      if (!entity) return false;
+      
+      const state = entity.state.toLowerCase();
+      return state === 'on' || 
+             state === 'true' || 
+             state === 'active' || 
+             state === 'problem' ||
+             state === 'alarm' ||
+             (state !== 'off' && state !== 'false' && state !== 'ok' && state !== 'none' && state !== 'unknown' && state !== '0');
+    });
+
+    // Only show section if there are errors or if configured to always show
+    if (activeErrors.length === 0 && !this.config.show_errors_always) {
+      return '';
+    }
+
+    return html`
+      <div class="section error-section ${activeErrors.length > 0 ? 'has-errors' : ''}">
+        <div class="section-title">
+          ${activeErrors.length > 0 ? '⚠️ Alerts & Errors' : '✓ System Status'}
+        </div>
+        ${activeErrors.length === 0 ? html`
+          <div class="no-errors">
+            <span class="success-icon">✓</span>
+            <span>No errors or warnings detected</span>
+          </div>
+        ` : html`
+          <div class="error-list">
+            ${activeErrors.map(entityId => {
+              const entity = this.hass.states[entityId];
+              if (!entity) return '';
+              
+              const name = this._getEntityName(entity);
+              const value = entity.state;
+              
+              return html`
+                <div class="error-item">
+                  <div class="error-icon">⚠️</div>
+                  <div class="error-content">
+                    <div class="error-name">${name}</div>
+                    <div class="error-value">${value}</div>
+                  </div>
+                </div>
+              `;
+            })}
+          </div>
+        `}
+      </div>
+    `;
+  }
+
   _findEntitiesByPattern(pattern, domain = null) {
     if (!this.hass) return [];
     
@@ -1323,6 +1387,72 @@ class ThzCard extends LitElement {
         text-align: center;
         color: var(--secondary-text-color);
         font-size: 14px;
+      }
+
+      /* Error Section Styles */
+      .error-section {
+        border-color: var(--divider-color);
+      }
+
+      .error-section.has-errors {
+        border-color: #ff9800;
+        border-width: 2px;
+        background: rgba(255, 152, 0, 0.05);
+      }
+
+      .no-errors {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 16px;
+        color: #4caf50;
+        font-size: 14px;
+        justify-content: center;
+        background: rgba(76, 175, 80, 0.05);
+        border-radius: 4px;
+      }
+
+      .success-icon {
+        font-size: 20px;
+        font-weight: bold;
+      }
+
+      .error-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .error-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px;
+        background: rgba(255, 152, 0, 0.1);
+        border: 1px solid #ff9800;
+        border-radius: 4px;
+      }
+
+      .error-icon {
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .error-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .error-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--primary-text-color);
+        margin-bottom: 4px;
+      }
+
+      .error-value {
+        font-size: 13px;
+        color: var(--secondary-text-color);
       }
 
       @media (max-width: 600px) {
