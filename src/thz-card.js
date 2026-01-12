@@ -175,7 +175,7 @@ class ThzCard extends LitElement {
       statusIcon = '🌨️';
     } else if (/off|aus/i.test(state)) {
       statusClass = 'status-off';
-      statusIcon = '⭘';
+      statusIcon = '⭕';
     }
 
     return html`
@@ -611,6 +611,7 @@ class ThzCard extends LitElement {
     const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch/i, 'sensor');
     const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad/i, 'sensor');
 
+    // Combine and deduplicate sensors (some entities might match multiple patterns)
     const allEnergySensors = [...new Set([...powerSensors, ...energySensors, ...copSensors])];
 
     if (allEnergySensors.length === 0) {
@@ -943,13 +944,9 @@ class ThzCard extends LitElement {
 
   _isErrorState(state) {
     const lowerState = state.toLowerCase();
-    // Check for active error states
-    const activeStates = ['on', 'true', 'active', 'problem', 'alarm'];
-    if (activeStates.includes(lowerState)) return true;
-    
-    // Check for non-error states (anything else is considered an error)
-    const okStates = ['off', 'false', 'ok', 'none', 'unknown', '0'];
-    return !okStates.includes(lowerState);
+    // Check for explicit error/alarm states
+    const errorStates = ['on', 'true', 'active', 'problem', 'alarm', 'error', 'fault'];
+    return errorStates.includes(lowerState);
   }
 
   _findEntitiesByPattern(pattern, domain = null) {
