@@ -21,12 +21,14 @@ class ThzCardEditor extends LitElement {
       <div class="card-config">
         <div class="option">
           <label for="entity">Entity (optional - auto-discover THZ entities)</label>
-          <input
+          <ha-entity-picker
             id="entity"
-            type="text"
+            .hass=${this.hass}
             .value=${this.config.entity || ''}
-            @change=${this._entityChanged}
+            @value-changed=${this._entityChanged}
+            allow-custom-entity
             placeholder="Leave empty to auto-discover">
+          </ha-entity-picker>
         </div>
 
         <div class="option">
@@ -104,7 +106,7 @@ class ThzCardEditor extends LitElement {
 
   _entityChanged(ev) {
     const newConfig = { ...this.config };
-    newConfig.entity = ev.target.value;
+    newConfig.entity = ev.detail.value;
     this._updateConfig(newConfig);
   }
 
@@ -200,6 +202,24 @@ class ThzCardEditor extends LitElement {
       input[type="text"]:focus {
         outline: none;
         border-color: var(--primary-color);
+      }
+
+      input[type="number"] {
+        padding: 8px;
+        border: 1px solid var(--divider-color);
+        border-radius: 4px;
+        background: var(--secondary-background-color);
+        color: var(--primary-text-color);
+        font-size: 14px;
+      }
+
+      input[type="number"]:focus {
+        outline: none;
+        border-color: var(--primary-color);
+      }
+
+      ha-entity-picker {
+        width: 100%;
       }
 
       input[type="checkbox"] {
