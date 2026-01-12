@@ -5,6 +5,7 @@ A custom card for Home Assistant to control THZ heat pumps. This card provides a
 ## Features
 
 - 🌡️ **Temperature Monitoring**: Display multiple temperature sensors in an organized grid
+- 📊 **Temperature Graphs**: Visual history graphs showing temperature trends over time
 - 🔧 **Operation Mode Control**: Easy switching between different operating modes
 - 🏠 **Heating Circuit Control**: Control heating circuit settings and temperatures
 - 💧 **Hot Water Management**: Monitor and control hot water settings
@@ -55,6 +56,8 @@ resources:
 | `name` | string | `Heat Pump` | Name displayed at the top of the card |
 | `entity` | string | (optional) | Specific entity to monitor (auto-discovery used if empty) |
 | `show_temperature` | boolean | `true` | Show temperature sensors section |
+| `show_temperature_graph` | boolean | `true` | Show temperature history graph |
+| `graph_hours` | number | `24` | Number of hours to display in temperature graph (1-168) |
 | `show_mode` | boolean | `true` | Show operation mode controls |
 | `show_heating_circuit` | boolean | `true` | Show heating circuit controls |
 | `show_hot_water` | boolean | `true` | Show hot water controls |
@@ -67,6 +70,8 @@ resources:
 type: custom:thz-card
 name: My Heat Pump
 show_temperature: true
+show_temperature_graph: true
+graph_hours: 24
 show_mode: true
 show_heating_circuit: true
 show_hot_water: true
@@ -86,15 +91,30 @@ The card will automatically discover all THZ entities and display them in organi
 type: custom:thz-card
 name: Living Room Heat Pump
 show_temperature: true
+show_temperature_graph: false
 show_mode: true
 show_heating_circuit: true
 show_hot_water: false
+```
+
+#### Extended Time Range Configuration
+
+```yaml
+type: custom:thz-card
+name: Heat Pump with Weekly Graph
+show_temperature: true
+show_temperature_graph: true
+graph_hours: 168  # Show 1 week of data
+show_mode: true
+show_heating_circuit: true
+show_hot_water: true
 ```
 
 ## Screenshots
 
 The card provides several sections for controlling your heat pump:
 
+- **Temperature Graph**: Visual display of temperature history with customizable time range (requires Home Assistant history integration)
 - **Temperature Section**: Displays all temperature sensors from your heat pump
 - **Operation Mode Section**: Dropdown selectors for changing operating modes
 - **Heating Circuit Section**: Switches and number inputs for heating circuit control

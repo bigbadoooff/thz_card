@@ -5,6 +5,7 @@ A custom card for Home Assistant to control THZ heat pumps.
 ## Features
 
 - 🌡️ Temperature monitoring with organized sensor grid
+- 📊 Temperature history graphs with customizable time range
 - 🔧 Operation mode control with dropdown selectors  
 - 🏠 Heating circuit control for temperature and settings
 - 💧 Hot water management and temperature control
@@ -28,7 +29,7 @@ After installation, add the card to your dashboard:
 4. Configure using the visual editor
 
 The card will automatically discover all THZ entities and organize them into sections:
-- Temperature sensors
+- Temperature sensors with visual history graph
 - Operation modes
 - Heating circuit controls
 - Hot water controls
@@ -41,5 +42,7 @@ The card provides several configuration options:
 - **Name**: Display name for the card
 - **Entity**: Optional specific entity (auto-discovery if empty)
 - **Show sections**: Toggle temperature, mode, heating circuit, and hot water sections
+- **Temperature graph**: Enable/disable temperature history graph
+- **Graph time range**: Configure hours of history to display (1-168 hours)
 
 For detailed configuration and examples, see the [README](https://github.com/bigbadoooff/thz_card).

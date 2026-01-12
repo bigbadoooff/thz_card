@@ -52,6 +52,27 @@ class ThzCardEditor extends LitElement {
           <label>
             <input
               type="checkbox"
+              .checked=${this.config.show_temperature_graph !== false}
+              @change=${this._toggleTemperatureGraph}>
+            Show Temperature Graph
+          </label>
+        </div>
+
+        <div class="option">
+          <label for="graph_hours">Graph Time Range (hours)</label>
+          <input
+            id="graph_hours"
+            type="number"
+            min="1"
+            max="168"
+            .value=${this.config.graph_hours || 24}
+            @change=${this._graphHoursChanged}>
+        </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
               .checked=${this.config.show_mode !== false}
               @change=${this._toggleMode}>
             Show Mode Section
@@ -97,6 +118,21 @@ class ThzCardEditor extends LitElement {
     const newConfig = { ...this.config };
     newConfig.show_temperature = ev.target.checked;
     this._updateConfig(newConfig);
+  }
+
+  _toggleTemperatureGraph(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_temperature_graph = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _graphHoursChanged(ev) {
+    const newConfig = { ...this.config };
+    const hours = parseInt(ev.target.value);
+    if (!isNaN(hours) && hours >= 1 && hours <= 168) {
+      newConfig.graph_hours = hours;
+      this._updateConfig(newConfig);
+    }
   }
 
   _toggleMode(ev) {

@@ -22,7 +22,13 @@ class ThzCard extends LitElement {
     return {
       hass: { type: Object },
       config: { type: Object },
+      _historyData: { type: Object },
     };
+  }
+
+  constructor() {
+    super();
+    this._historyData = {};
   }
 
   static getConfigElement() {
@@ -34,6 +40,8 @@ class ThzCard extends LitElement {
       entity: '',
       name: 'Heat Pump',
       show_temperature: true,
+      show_temperature_graph: true,
+      graph_hours: 24,
       show_mode: true,
       show_heating_circuit: true,
       show_hot_water: true,
@@ -47,6 +55,8 @@ class ThzCard extends LitElement {
     this.config = {
       name: 'Heat Pump',
       show_temperature: true,
+      show_temperature_graph: true,
+      graph_hours: 24,
       show_mode: true,
       show_heating_circuit: true,
       show_hot_water: true,
@@ -98,6 +108,7 @@ class ThzCard extends LitElement {
     return html`
       <div class="section">
         <div class="section-title">Temperatures</div>
+        ${this.config.show_temperature_graph && tempSensors.length > 0 ? this._renderTemperatureGraph(tempSensors) : ''}
         <div class="sensor-grid">
           ${tempSensors.slice(0, 6).map(entityId => {
             const entity = this.hass.states[entityId];
@@ -117,6 +128,207 @@ class ThzCard extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  _renderTemperatureGraph(tempSensors) {
+    // Limit to first 4 sensors for cleaner graph
+    const sensorsToGraph = tempSensors.slice(0, 4);
+    
+    // Load history data when component is first rendered
+    if (!this._historyData[sensorsToGraph[0]]) {
+      this._loadHistoryData(sensorsToGraph);
+    }
+
+    // Define colors for different sensors
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#6c5ce7', '#a29bfe'];
+    
+    return html`
+      <div class="temperature-graph">
+        <div class="graph-header">
+          <div class="graph-title">Temperature History (${this.config.graph_hours || 24}h)</div>
+          <button 
+            class="refresh-button" 
+            @click=${() => this._loadHistoryData(sensorsToGraph)}
+            title="Refresh graph data">
+            ↻
+          </button>
+        </div>
+        <div class="graph-legend">
+          ${sensorsToGraph.map((entityId, index) => {
+            const entity = this.hass.states[entityId];
+            if (!entity) return '';
+            const name = this._getEntityName(entity);
+            return html`
+              <div class="legend-item">
+                <span class="legend-color" style="background-color: ${colors[index]}"></span>
+                <span class="legend-label">${name}</span>
+              </div>
+            `;
+          })}
+        </div>
+        ${this._renderGraph(sensorsToGraph, colors)}
+      </div>
+    `;
+  }
+
+  _renderGraph(sensorsToGraph, colors) {
+    const width = 100; // percentage
+    const height = 200;
+    const padding = { top: 10, right: 10, bottom: 20, left: 40 };
+    const graphWidth = 100 - padding.left - padding.right;
+    const graphHeight = height - padding.top - padding.bottom;
+
+    // Check if we have any data
+    const hasData = sensorsToGraph.some(entityId => 
+      this._historyData[entityId] && this._historyData[entityId].length > 0
+    );
+
+    if (!hasData) {
+      return html`
+        <div class="graph-loading">
+          Loading graph data...
+        </div>
+      `;
+    }
+
+    // Get min and max values across all sensors for scaling
+    let minTemp = Infinity;
+    let maxTemp = -Infinity;
+    let minTime = Infinity;
+    let maxTime = -Infinity;
+
+    sensorsToGraph.forEach(entityId => {
+      const data = this._historyData[entityId] || [];
+      data.forEach(point => {
+        const temp = parseFloat(point.state);
+        if (!isNaN(temp)) {
+          minTemp = Math.min(minTemp, temp);
+          maxTemp = Math.max(maxTemp, temp);
+        }
+        const time = new Date(point.last_changed).getTime();
+        minTime = Math.min(minTime, time);
+        maxTime = Math.max(maxTime, time);
+      });
+    });
+
+    // Add some padding to min/max
+    const tempRange = maxTemp - minTemp;
+    minTemp = Math.floor(minTemp - tempRange * 0.1);
+    maxTemp = Math.ceil(maxTemp + tempRange * 0.1);
+
+    // Generate Y-axis labels (temperature)
+    const yAxisLabels = [];
+    const numYTicks = 5;
+    for (let i = 0; i <= numYTicks; i++) {
+      const temp = minTemp + (maxTemp - minTemp) * (i / numYTicks);
+      const y = graphHeight - (i / numYTicks) * graphHeight;
+      yAxisLabels.push({ temp: temp.toFixed(1), y });
+    }
+
+    // Generate paths for each sensor
+    const paths = sensorsToGraph.map((entityId, index) => {
+      const data = this._historyData[entityId] || [];
+      if (data.length === 0) return null;
+
+      const points = data
+        .map(point => {
+          const temp = parseFloat(point.state);
+          if (isNaN(temp)) return null;
+          
+          const time = new Date(point.last_changed).getTime();
+          const x = ((time - minTime) / (maxTime - minTime)) * graphWidth;
+          const y = graphHeight - ((temp - minTemp) / (maxTemp - minTemp)) * graphHeight;
+          
+          return { x, y };
+        })
+        .filter(p => p !== null);
+
+      if (points.length === 0) return null;
+
+      const pathData = points.map((p, i) => 
+        `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
+      ).join(' ');
+
+      return {
+        path: pathData,
+        color: colors[index],
+      };
+    }).filter(p => p !== null);
+
+    return html`
+      <svg class="graph-svg" viewBox="0 0 100 ${height}" preserveAspectRatio="none">
+        <!-- Y-axis labels -->
+        <g class="y-axis">
+          ${yAxisLabels.map(label => html`
+            <text 
+              x="${padding.left - 5}" 
+              y="${padding.top + label.y}" 
+              class="axis-label"
+              text-anchor="end"
+              alignment-baseline="middle">
+              ${label.temp}
+            </text>
+            <line 
+              x1="${padding.left}" 
+              y1="${padding.top + label.y}" 
+              x2="${padding.left + graphWidth}" 
+              y2="${padding.top + label.y}" 
+              class="grid-line" />
+          `)}
+        </g>
+        
+        <!-- Graph area -->
+        <g class="graph-area" transform="translate(${padding.left}, ${padding.top})">
+          ${paths.map(pathData => html`
+            <path 
+              d="${pathData.path}" 
+              fill="none" 
+              stroke="${pathData.color}" 
+              stroke-width="0.5" 
+              vector-effect="non-scaling-stroke" />
+          `)}
+        </g>
+      </svg>
+    `;
+  }
+
+  async _loadHistoryData(entityIds) {
+    const hours = this.config.graph_hours || 24;
+    const endTime = new Date();
+    const startTime = new Date(endTime.getTime() - hours * 60 * 60 * 1000);
+
+    try {
+      const promises = entityIds.map(async entityId => {
+        try {
+          const history = await this.hass.callWS({
+            type: 'history/history_during_period',
+            start_time: startTime.toISOString(),
+            end_time: endTime.toISOString(),
+            entity_ids: [entityId],
+            minimal_response: true,
+            significant_changes_only: false,
+          });
+
+          if (history && history[0]) {
+            this._historyData = {
+              ...this._historyData,
+              [entityId]: history[0],
+            };
+          }
+        } catch (err) {
+          console.error(`Failed to load history for ${entityId}:`, err);
+          this._historyData = {
+            ...this._historyData,
+            [entityId]: [],
+          };
+        }
+      });
+
+      await Promise.all(promises);
+      this.requestUpdate();
+    } catch (error) {
+      console.error('Failed to load history data:', error);
+    }
   }
 
   _renderModeSection(stateObj) {
@@ -503,6 +715,98 @@ class ThzCard extends LitElement {
       .unit {
         font-size: 12px;
         color: var(--secondary-text-color);
+      }
+
+      /* Temperature Graph Styles */
+      .temperature-graph {
+        margin-bottom: 16px;
+        padding: 12px;
+        background: var(--secondary-background-color);
+        border-radius: 8px;
+      }
+
+      .graph-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .graph-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--primary-text-color);
+      }
+
+      .refresh-button {
+        background: none;
+        border: 1px solid var(--divider-color);
+        border-radius: 4px;
+        color: var(--primary-text-color);
+        cursor: pointer;
+        padding: 4px 8px;
+        font-size: 16px;
+        transition: all 0.2s ease;
+      }
+
+      .refresh-button:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+      }
+
+      .graph-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--divider-color);
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--primary-text-color);
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 3px;
+        border-radius: 2px;
+      }
+
+      .legend-label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .graph-svg {
+        width: 100%;
+        height: 200px;
+        background: var(--card-background-color);
+        border-radius: 4px;
+      }
+
+      .axis-label {
+        font-size: 3px;
+        fill: var(--secondary-text-color);
+      }
+
+      .grid-line {
+        stroke: var(--divider-color);
+        stroke-width: 0.1;
+        opacity: 0.5;
+      }
+
+      .graph-loading {
+        padding: 40px;
+        text-align: center;
+        color: var(--secondary-text-color);
+        font-size: 14px;
       }
 
       @media (max-width: 600px) {
