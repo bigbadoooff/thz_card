@@ -312,6 +312,8 @@ class ThzCard extends LitElement {
     return Object.keys(this.hass.states).filter(entityId => {
       // Check if it belongs to the thz integration or matches pattern
       const entity = this.hass.states[entityId];
+      if (!entity || !entity.attributes) return false;
+      
       const matchesTHZ = entityId.includes('thz') || 
                         entity.attributes.integration === 'thz';
       

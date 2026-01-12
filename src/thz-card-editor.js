@@ -144,6 +144,12 @@ class ThzCardEditor extends LitElement {
       label {
         font-size: 14px;
         color: var(--primary-text-color);
+        cursor: pointer;
+      }
+
+      .option label {
+        display: flex;
+        align-items: center;
       }
 
       input[type="text"] {
@@ -158,15 +164,6 @@ class ThzCardEditor extends LitElement {
       input[type="text"]:focus {
         outline: none;
         border-color: var(--primary-color);
-      }
-
-      label {
-        cursor: pointer;
-      }
-
-      .option label {
-        display: flex;
-        align-items: center;
       }
 
       input[type="checkbox"] {

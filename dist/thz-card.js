@@ -97,6 +97,12 @@ const A=globalThis,w=t=>t,x=A.trustedTypes,E=x?x.createPolicy("lit-html",{create
       label {
         font-size: 14px;
         color: var(--primary-text-color);
+        cursor: pointer;
+      }
+
+      .option label {
+        display: flex;
+        align-items: center;
       }
 
       input[type="text"] {
@@ -111,15 +117,6 @@ const A=globalThis,w=t=>t,x=A.trustedTypes,E=x?x.createPolicy("lit-html",{create
       input[type="text"]:focus {
         outline: none;
         border-color: var(--primary-color);
-      }
-
-      label {
-        cursor: pointer;
-      }
-
-      .option label {
-        display: flex;
-        align-items: center;
       }
 
       input[type="checkbox"] {
@@ -248,7 +245,7 @@ const A=globalThis,w=t=>t,x=A.trustedTypes,E=x?x.createPolicy("lit-html",{create
             `})}
         </div>
       </div>
-    `}_findEntitiesByPattern(t,e=null){return this.hass?Object.keys(this.hass.states).filter(i=>{const s=this.hass.states[i];return!(!i.includes("thz")&&"thz"!==s.attributes.integration)&&(!(e&&!i.startsWith(e+"."))&&(t.test(i)||t.test(s.attributes.friendly_name||"")))}):[]}_getEntityName(t){return t.attributes.friendly_name||t.entity_id.split(".")[1]}_handleSelectChange(t,e){this.hass.callService("select","select_option",{entity_id:t,option:e})}_handleSwitchToggle(t,e){const i=e?"turn_on":"turn_off";this.hass.callService("switch",i,{entity_id:t})}_handleNumberChange(t,e){this.hass.callService("number","set_value",{entity_id:t,value:parseFloat(e)})}static get styles(){return n`
+    `}_findEntitiesByPattern(t,e=null){return this.hass?Object.keys(this.hass.states).filter(i=>{const s=this.hass.states[i];if(!s||!s.attributes)return!1;return!(!i.includes("thz")&&"thz"!==s.attributes.integration)&&(!(e&&!i.startsWith(e+"."))&&(t.test(i)||t.test(s.attributes.friendly_name||"")))}):[]}_getEntityName(t){return t.attributes.friendly_name||t.entity_id.split(".")[1]}_handleSelectChange(t,e){this.hass.callService("select","select_option",{entity_id:t,option:e})}_handleSwitchToggle(t,e){const i=e?"turn_on":"turn_off";this.hass.callService("switch",i,{entity_id:t})}_handleNumberChange(t,e){this.hass.callService("number","set_value",{entity_id:t,value:parseFloat(e)})}static get styles(){return n`
       :host {
         display: block;
       }
