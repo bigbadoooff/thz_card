@@ -137,6 +137,36 @@ class ThzCardEditor extends LitElement {
             Show Hot Water Section
           </label>
         </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this.config.show_status !== false}
+              @change=${this._toggleStatus}>
+            Show Status Badge
+          </label>
+        </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this.config.show_statistics !== false}
+              @change=${this._toggleStatistics}>
+            Show Statistics Dashboard
+          </label>
+        </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this.config.show_energy !== false}
+              @change=${this._toggleEnergy}>
+            Show Energy & Efficiency Section
+          </label>
+        </div>
       </div>
     `;
   }
@@ -207,6 +237,24 @@ class ThzCardEditor extends LitElement {
   _toggleHotWater(ev) {
     const newConfig = { ...this.config };
     newConfig.show_hot_water = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _toggleStatus(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_status = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _toggleStatistics(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_statistics = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _toggleEnergy(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_energy = ev.target.checked;
     this._updateConfig(newConfig);
   }
 
