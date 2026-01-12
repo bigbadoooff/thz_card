@@ -50,6 +50,7 @@ class ThzCard extends LitElement {
       show_status: true,
       show_energy: true,
       show_statistics: true,
+      show_errors_always: false,
     };
   }
 
@@ -70,6 +71,7 @@ class ThzCard extends LitElement {
       show_status: true,
       show_energy: true,
       show_statistics: true,
+      show_errors_always: false,
       ...config,
     };
   }
@@ -907,12 +909,14 @@ class ThzCard extends LitElement {
       return '';
     }
 
+    const hasErrors = activeErrors.length > 0;
+
     return html`
-      <div class="section error-section ${activeErrors.length > 0 ? 'has-errors' : ''}">
+      <div class="section error-section ${hasErrors ? 'has-errors' : ''}">
         <div class="section-title">
-          ${activeErrors.length > 0 ? '⚠️ Alerts & Errors' : '✓ System Status'}
+          ${hasErrors ? '⚠️ Alerts & Errors' : '✓ System Status'}
         </div>
-        ${activeErrors.length === 0 ? html`
+        ${!hasErrors ? html`
           <div class="no-errors">
             <span class="success-icon">✓</span>
             <span>No errors or warnings detected</span>

@@ -255,7 +255,7 @@ const x=globalThis,w=t=>t,S=x.trustedTypes,E=S?S.createPolicy("lit-html",{create
       input[type="checkbox"] {
         margin-right: 8px;
       }
-    `}});console.info("%c  THZ-CARD  \n%c  Version 1.1.0  ","color: orange; font-weight: bold; background: black","color: white; font-weight: bold; background: dimgray"),window.customCards=window.customCards||[],window.customCards.push({type:"thz-card",name:"THZ Card",description:"A custom card for controlling THZ heat pumps"});customElements.define("thz-card",class extends nt{static get properties(){return{hass:{type:Object},config:{type:Object},_historyData:{type:Object}}}constructor(){super(),this._historyData={},this._loadingHistory=!1}static getConfigElement(){return document.createElement("thz-card-editor")}static getStubConfig(){return{name:"Heat Pump",show_temperature:!0,show_temperature_graph:!0,show_fan_graph:!0,show_heating_details_graph:!0,graph_hours:24,show_mode:!0,show_heating_circuit:!0,show_hot_water:!0,show_status:!0,show_energy:!0,show_statistics:!0}}setConfig(t){if(!t)throw new Error("Invalid configuration");this.config={name:"Heat Pump",show_temperature:!0,show_temperature_graph:!0,show_fan_graph:!0,show_heating_details_graph:!0,graph_hours:24,show_mode:!0,show_heating_circuit:!0,show_hot_water:!0,show_status:!0,show_energy:!0,show_statistics:!0,...t}}getCardSize(){return 5}shouldUpdate(t){return!!this.config}render(){return this.config&&this.hass?j`
+    `}});console.info("%c  THZ-CARD  \n%c  Version 1.1.0  ","color: orange; font-weight: bold; background: black","color: white; font-weight: bold; background: dimgray"),window.customCards=window.customCards||[],window.customCards.push({type:"thz-card",name:"THZ Card",description:"A custom card for controlling THZ heat pumps"});customElements.define("thz-card",class extends nt{static get properties(){return{hass:{type:Object},config:{type:Object},_historyData:{type:Object}}}constructor(){super(),this._historyData={},this._loadingHistory=!1}static getConfigElement(){return document.createElement("thz-card-editor")}static getStubConfig(){return{name:"Heat Pump",show_temperature:!0,show_temperature_graph:!0,show_fan_graph:!0,show_heating_details_graph:!0,graph_hours:24,show_mode:!0,show_heating_circuit:!0,show_hot_water:!0,show_status:!0,show_energy:!0,show_statistics:!0,show_errors_always:!1}}setConfig(t){if(!t)throw new Error("Invalid configuration");this.config={name:"Heat Pump",show_temperature:!0,show_temperature_graph:!0,show_fan_graph:!0,show_heating_details_graph:!0,graph_hours:24,show_mode:!0,show_heating_circuit:!0,show_hot_water:!0,show_status:!0,show_energy:!0,show_statistics:!0,show_errors_always:!1,...t}}getCardSize(){return 5}shouldUpdate(t){return!!this.config}render(){return this.config&&this.hass?j`
       <ha-card>
         <div class="card-header">
           <div class="name">${this.config.name}</div>
@@ -547,17 +547,12 @@ const x=globalThis,w=t=>t,S=x.trustedTypes,E=S?S.createPolicy("lit-html",{create
             `})}
         </div>
       </div>
-    `}_renderErrorSection(){const t=[...this._findEntitiesByPattern(/error|alarm|fault|fehler|st[öo]rung|warnung/i,"sensor"),...this._findEntitiesByPattern(/error|alarm|fault|fehler|st[öo]rung|warnung/i,"binary_sensor")];if(0===t.length)return"";const e=t.filter(t=>{const e=this.hass.states[t];if(!e)return!1;const s=e.state.toLowerCase();return"on"===s||"true"===s||"active"===s||"problem"===s||"alarm"===s||"off"!==s&&"false"!==s&&"ok"!==s&&"none"!==s&&"unknown"!==s&&"0"!==s});return 0!==e.length||this.config.show_errors_always?j`
-      <div class="section error-section ${e.length>0?"has-errors":""}">
+    `}_renderErrorSection(){const t=[...this._findEntitiesByPattern(/error|alarm|fault|fehler|st[öo]rung|warnung/i,"sensor"),...this._findEntitiesByPattern(/error|alarm|fault|fehler|st[öo]rung|warnung/i,"binary_sensor")];if(0===t.length)return"";const e=t.filter(t=>{const e=this.hass.states[t];if(!e)return!1;const s=e.state.toLowerCase();return"on"===s||"true"===s||"active"===s||"problem"===s||"alarm"===s||"off"!==s&&"false"!==s&&"ok"!==s&&"none"!==s&&"unknown"!==s&&"0"!==s});if(0===e.length&&!this.config.show_errors_always)return"";const s=e.length>0;return j`
+      <div class="section error-section ${s?"has-errors":""}">
         <div class="section-title">
-          ${e.length>0?"⚠️ Alerts & Errors":"✓ System Status"}
+          ${s?"⚠️ Alerts & Errors":"✓ System Status"}
         </div>
-        ${0===e.length?j`
-          <div class="no-errors">
-            <span class="success-icon">✓</span>
-            <span>No errors or warnings detected</span>
-          </div>
-        `:j`
+        ${s?j`
           <div class="error-list">
             ${e.map(t=>{const e=this.hass.states[t];if(!e)return"";const s=this._getEntityName(e),i=e.state;return j`
                 <div class="error-item">
@@ -569,9 +564,14 @@ const x=globalThis,w=t=>t,S=x.trustedTypes,E=S?S.createPolicy("lit-html",{create
                 </div>
               `})}
           </div>
+        `:j`
+          <div class="no-errors">
+            <span class="success-icon">✓</span>
+            <span>No errors or warnings detected</span>
+          </div>
         `}
       </div>
-    `:""}_findEntitiesByPattern(t,e=null){if(!this.hass)return[];let s=null;return this.config.device_id&&this.hass.devices&&this.hass.entities&&(s=Object.entries(this.hass.entities).filter(([t,e])=>e.device_id===this.config.device_id).map(([t])=>t)),Object.entries(this.hass.states).filter(([i,r])=>{if(!r||!r.attributes)return!1;if(s&&!s.includes(i))return!1;if(this.config.entity_filter&&!i.toLowerCase().includes(this.config.entity_filter.toLowerCase()))return!1;return!!(this.config.entity_filter||this.config.device_id||i.toLowerCase().includes("thz")||i.toLowerCase().includes("tecalor")||i.toLowerCase().includes("lwz")||"thz"===r.attributes.integration||r.attributes.device_class&&JSON.stringify(r.attributes).toLowerCase().includes("thz"))&&(!(e&&!i.startsWith(e+"."))&&(t.test(i)||t.test(r.attributes.friendly_name||"")))}).map(([t])=>t)}_getEntityName(t){return t.attributes.friendly_name||t.entity_id?.split?.(".")[1]||"Unknown"}_handleSelectChange(t,e){this.hass.callService("select","select_option",{entity_id:t,option:e})}_handleSwitchToggle(t,e){const s=e?"turn_on":"turn_off";this.hass.callService("switch",s,{entity_id:t})}_handleNumberChange(t,e){const s=parseFloat(e);isNaN(s)||this.hass.callService("number","set_value",{entity_id:t,value:s})}static get styles(){return o`
+    `}_findEntitiesByPattern(t,e=null){if(!this.hass)return[];let s=null;return this.config.device_id&&this.hass.devices&&this.hass.entities&&(s=Object.entries(this.hass.entities).filter(([t,e])=>e.device_id===this.config.device_id).map(([t])=>t)),Object.entries(this.hass.states).filter(([i,r])=>{if(!r||!r.attributes)return!1;if(s&&!s.includes(i))return!1;if(this.config.entity_filter&&!i.toLowerCase().includes(this.config.entity_filter.toLowerCase()))return!1;return!!(this.config.entity_filter||this.config.device_id||i.toLowerCase().includes("thz")||i.toLowerCase().includes("tecalor")||i.toLowerCase().includes("lwz")||"thz"===r.attributes.integration||r.attributes.device_class&&JSON.stringify(r.attributes).toLowerCase().includes("thz"))&&(!(e&&!i.startsWith(e+"."))&&(t.test(i)||t.test(r.attributes.friendly_name||"")))}).map(([t])=>t)}_getEntityName(t){return t.attributes.friendly_name||t.entity_id?.split?.(".")[1]||"Unknown"}_handleSelectChange(t,e){this.hass.callService("select","select_option",{entity_id:t,option:e})}_handleSwitchToggle(t,e){const s=e?"turn_on":"turn_off";this.hass.callService("switch",s,{entity_id:t})}_handleNumberChange(t,e){const s=parseFloat(e);isNaN(s)||this.hass.callService("number","set_value",{entity_id:t,value:s})}static get styles(){return o`
       :host {
         display: block;
       }
