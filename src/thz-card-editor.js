@@ -22,9 +22,30 @@ class ThzCardEditor extends LitElement {
         <div class="info-box">
           <div class="info-title">ℹ️ Auto-Discovery</div>
           <div class="info-text">
-            This card automatically discovers and displays all THZ entities from your heat pump.
-            No entity selection needed - just configure display options below.
+            This card automatically discovers THZ/Tecalor/LWZ heat pump entities.
+            If auto-discovery doesn't work, specify a device or entity filter below.
           </div>
+        </div>
+
+        <div class="option">
+          <label for="device">Device (optional - for manual selection)</label>
+          <ha-device-picker
+            id="device"
+            .hass=${this.hass}
+            .value=${this.config.device_id || ''}
+            @value-changed=${this._deviceChanged}
+            allow-custom-entity>
+          </ha-device-picker>
+        </div>
+
+        <div class="option">
+          <label for="entity_filter">Entity Filter (optional - e.g., "my_heatpump")</label>
+          <input
+            id="entity_filter"
+            type="text"
+            .value=${this.config.entity_filter || ''}
+            @change=${this._entityFilterChanged}
+            placeholder="Leave empty for auto-discovery">
         </div>
 
         <div class="option">
@@ -98,6 +119,18 @@ class ThzCardEditor extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  _deviceChanged(ev) {
+    const newConfig = { ...this.config };
+    newConfig.device_id = ev.detail.value;
+    this._updateConfig(newConfig);
+  }
+
+  _entityFilterChanged(ev) {
+    const newConfig = { ...this.config };
+    newConfig.entity_filter = ev.target.value;
+    this._updateConfig(newConfig);
   }
 
   _nameChanged(ev) {
@@ -230,6 +263,10 @@ class ThzCardEditor extends LitElement {
       }
 
       ha-entity-picker {
+        width: 100%;
+      }
+
+      ha-device-picker {
         width: 100%;
       }
 

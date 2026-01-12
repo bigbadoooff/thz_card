@@ -540,14 +540,44 @@ class ThzCard extends LitElement {
   _findEntitiesByPattern(pattern, domain = null) {
     if (!this.hass) return [];
     
+    // Get device entities if device_id is specified
+    let deviceEntityIds = null;
+    if (this.config.device_id && this.hass.devices && this.hass.entities) {
+      deviceEntityIds = Object.entries(this.hass.entities)
+        .filter(([entityId, entity]) => entity.device_id === this.config.device_id)
+        .map(([entityId]) => entityId);
+    }
+    
     return Object.entries(this.hass.states)
       .filter(([entityId, entity]) => {
         // Check if entity has required attributes
         if (!entity || !entity.attributes) return false;
         
+        // If device_id is specified, only show entities from that device
+        if (deviceEntityIds && !deviceEntityIds.includes(entityId)) {
+          return false;
+        }
+        
+        // If entity_filter is specified, entity must contain the filter string
+        if (this.config.entity_filter && !entityId.toLowerCase().includes(this.config.entity_filter.toLowerCase())) {
+          return false;
+        }
+        
         // Check if it belongs to the thz integration or matches pattern
-        const matchesTHZ = entityId.includes('thz') || 
-                          entity.attributes.integration === 'thz';
+        // Check multiple ways an entity could be from THZ integration:
+        // 1. Entity ID contains 'thz' (most common)
+        // 2. Entity ID contains 'tecalor' (alternative branding)
+        // 3. Entity ID contains 'lwz' (Stiebel Eltron LWZ series)
+        // 4. Device name/via_device contains thz-related keywords
+        // 5. If entity_filter or device_id is set, skip THZ check (user knows what they want)
+        const skipTHZCheck = this.config.entity_filter || this.config.device_id;
+        const matchesTHZ = skipTHZCheck || 
+                          entityId.toLowerCase().includes('thz') || 
+                          entityId.toLowerCase().includes('tecalor') ||
+                          entityId.toLowerCase().includes('lwz') ||
+                          entity.attributes.integration === 'thz' ||
+                          (entity.attributes.device_class && 
+                           JSON.stringify(entity.attributes).toLowerCase().includes('thz'));
         
         if (!matchesTHZ) return false;
         

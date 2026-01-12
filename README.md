@@ -54,6 +54,8 @@ resources:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `name` | string | `Heat Pump` | Name displayed at the top of the card |
+| `device_id` | string | (optional) | Specific device ID to filter entities (use if auto-discovery doesn't work) |
+| `entity_filter` | string | (optional) | Filter string for entity IDs (e.g., "my_heatpump") |
 | `show_temperature` | boolean | `true` | Show temperature sensors section |
 | `show_temperature_graph` | boolean | `true` | Show temperature history graph |
 | `graph_hours` | number | `24` | Number of hours to display in temperature graph (1-168) |
@@ -61,7 +63,9 @@ resources:
 | `show_heating_circuit` | boolean | `true` | Show heating circuit controls |
 | `show_hot_water` | boolean | `true` | Show hot water controls |
 
-**Note**: The card automatically discovers all THZ entities from your heat pump. No manual entity selection is required.
+**Auto-Discovery**: The card automatically discovers entities containing "thz", "tecalor", or "lwz" in their entity ID. If auto-discovery doesn't work for your setup, you can:
+- Use the device picker to select your heat pump device, OR
+- Specify an `entity_filter` to match your entity naming pattern (e.g., if your entities are named `sensor.my_heatpump_temperature`, use `entity_filter: "my_heatpump"`)
 
 ### Example Configuration
 
@@ -84,7 +88,27 @@ show_hot_water: true
 type: custom:thz-card
 ```
 
-The card will automatically discover all THZ entities and display them in organized sections.
+The card will automatically discover all THZ/Tecalor/LWZ entities and display them in organized sections.
+
+#### Configuration with Device Selection
+
+If auto-discovery doesn't work, specify your device:
+
+```yaml
+type: custom:thz-card
+name: My Heat Pump
+device_id: abc123def456  # Get this from Home Assistant device page
+```
+
+#### Configuration with Entity Filter
+
+If your entities don't contain "thz", "tecalor", or "lwz":
+
+```yaml
+type: custom:thz-card
+name: My Heat Pump
+entity_filter: "my_heatpump"  # Matches sensor.my_heatpump_temperature, etc.
+```
 
 #### Custom Configuration
 
