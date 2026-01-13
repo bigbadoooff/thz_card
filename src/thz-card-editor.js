@@ -142,6 +142,16 @@ class ThzCardEditor extends LitElement {
           <label>
             <input
               type="checkbox"
+              .checked=${this.config.show_cooling !== false}
+              @change=${this._toggleCooling}>
+            Show Cooling Section
+          </label>
+        </div>
+
+        <div class="option">
+          <label>
+            <input
+              type="checkbox"
               .checked=${this.config.show_status !== false}
               @change=${this._toggleStatus}>
             Show Status Badge
@@ -247,6 +257,12 @@ class ThzCardEditor extends LitElement {
   _toggleHotWater(ev) {
     const newConfig = { ...this.config };
     newConfig.show_hot_water = ev.target.checked;
+    this._updateConfig(newConfig);
+  }
+
+  _toggleCooling(ev) {
+    const newConfig = { ...this.config };
+    newConfig.show_cooling = ev.target.checked;
     this._updateConfig(newConfig);
   }
 
