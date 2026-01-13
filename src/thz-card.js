@@ -47,6 +47,7 @@ class ThzCard extends LitElement {
       show_mode: true,
       show_heating_circuit: true,
       show_hot_water: true,
+      show_cooling: true,
       show_status: true,
       show_energy: true,
       show_statistics: true,
@@ -68,6 +69,7 @@ class ThzCard extends LitElement {
       show_mode: true,
       show_heating_circuit: true,
       show_hot_water: true,
+      show_cooling: true,
       show_status: true,
       show_energy: true,
       show_statistics: true,
@@ -108,6 +110,7 @@ class ThzCard extends LitElement {
           ${this.config.show_mode ? this._renderModeSection() : ''}
           ${this.config.show_heating_circuit ? this._renderHeatingCircuitSection() : ''}
           ${this.config.show_hot_water ? this._renderHotWaterSection() : ''}
+          ${this.config.show_cooling !== false ? this._renderCoolingSection() : ''}
           ${this._renderAdditionalControls()}
         </div>
       </ha-card>
@@ -117,13 +120,27 @@ class ThzCard extends LitElement {
   _renderTemperatureSection() {
     if (!this.config.show_temperature) return '';
 
-    // Find temperature sensors
-    const tempSensors = this._findEntitiesByPattern(/temperature|temp/i);
+    // Find specific temperature sensors (excluding HC1 settings)
+    // Focus on: room temp, outside temp, flow temp, return temp
+    const allTempSensors = this._findEntitiesByPattern(/temperature|temp/i, 'sensor');
+    
+    // Filter out HC1 settings - only keep actual temperature readings
+    const tempSensors = allTempSensors.filter(entityId => {
+      // Exclude HC1 settings (these are configuration values, not sensors)
+      if (/hc1.*set|hc1.*soll|heating.*circuit.*1.*set/i.test(entityId)) {
+        return false;
+      }
+      // Include room, outside, flow, return, and other actual temperature sensors
+      return true;
+    });
+    
+    // For graph, prioritize key temperatures: room, outside, flow, return
+    const graphSensors = this._getKeyTemperatureSensors(tempSensors);
     
     return html`
       <div class="section">
         <div class="section-title">Temperatures</div>
-        ${this.config.show_temperature_graph && tempSensors.length > 0 ? this._renderTemperatureGraph(tempSensors) : ''}
+        ${this.config.show_temperature_graph && graphSensors.length > 0 ? this._renderTemperatureGraph(graphSensors) : ''}
         <div class="sensor-grid">
           ${tempSensors.slice(0, 6).map(entityId => {
             const entity = this.hass.states[entityId];
@@ -145,9 +162,40 @@ class ThzCard extends LitElement {
     `;
   }
 
+  _getKeyTemperatureSensors(allTempSensors) {
+    // Prioritize specific temperature types for the graph
+    const priorities = [
+      { pattern: /room.*temp|raum.*temp|indoor/i, found: null },
+      { pattern: /outside.*temp|outdoor|au[sß]en.*temp|ambient/i, found: null },
+      { pattern: /flow.*temp|vorlauf.*temp|supply/i, found: null },
+      { pattern: /return.*temp|r[üu]cklauf.*temp/i, found: null },
+    ];
+    
+    // Find matches for each priority
+    allTempSensors.forEach(entityId => {
+      const entity = this.hass.states[entityId];
+      if (!entity) return;
+      
+      const fullName = (entityId + ' ' + (entity.attributes.friendly_name || '')).toLowerCase();
+      
+      priorities.forEach(priority => {
+        if (!priority.found && priority.pattern.test(fullName)) {
+          priority.found = entityId;
+        }
+      });
+    });
+    
+    // Return found sensors, then fill with remaining sensors if needed
+    const keySensors = priorities.filter(p => p.found).map(p => p.found);
+    const remainingSensors = allTempSensors.filter(id => !keySensors.includes(id));
+    
+    return [...keySensors, ...remainingSensors].slice(0, 4);
+  }
+
   _renderStatusBadge() {
-    // Find status/state sensors
-    const statusSensors = this._findEntitiesByPattern(/state|status|mode|betrieb/i, 'sensor');
+    // Find status/state sensors - broaden search patterns
+    // Look for: state, status, mode, operation, betrieb, zustand
+    const statusSensors = this._findEntitiesByPattern(/state|status|mode|betrieb|operation|operating|zustand/i, 'sensor');
     
     if (statusSensors.length === 0) {
       return html``;
@@ -187,11 +235,11 @@ class ThzCard extends LitElement {
   }
 
   _renderStatistics() {
-    // Find various statistics sensors
-    const runtimeSensors = this._findEntitiesByPattern(/runtime|laufzeit|operating.*time/i, 'sensor');
-    const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch/i, 'sensor');
-    const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad/i, 'sensor');
-    const compressorSensors = this._findEntitiesByPattern(/compressor|verdichter/i, 'sensor');
+    // Find various statistics sensors - broaden search patterns
+    const runtimeSensors = this._findEntitiesByPattern(/runtime|laufzeit|operating.*time|betriebszeit|hours|stunden/i, 'sensor');
+    const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch|kwh/i, 'sensor');
+    const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad|coefficient/i, 'sensor');
+    const compressorSensors = this._findEntitiesByPattern(/compressor|verdichter|starts|cycles/i, 'sensor');
 
     const stats = [];
 
@@ -498,34 +546,35 @@ class ThzCard extends LitElement {
   }
 
   _renderFanSection() {
-    // Find fan-related sensors
-    const fanSensors = this._findEntitiesByPattern(/fan|l[üu]fter|ventilat/i, 'sensor');
+    // Find fan-related sensors - broaden search patterns
+    const fanSensors = this._findEntitiesByPattern(/fan|l[üu]fter|ventilat|speed|rpm|drehzahl/i, 'sensor');
     
-    if (fanSensors.length === 0 && !this.config.show_fan_graph) {
-      return '';
-    }
-    
+    // Always show the Fan Values section
     return html`
       <div class="section">
         <div class="section-title">Fan Values</div>
         ${this.config.show_fan_graph && fanSensors.length > 0 ? this._renderFanGraph(fanSensors) : ''}
-        <div class="sensor-grid">
-          ${fanSensors.slice(0, 6).map(entityId => {
-            const entity = this.hass.states[entityId];
-            if (!entity) return '';
-            
-            const name = this._getEntityName(entity);
-            const value = entity.state;
-            const unit = entity.attributes.unit_of_measurement || '';
-            
-            return html`
-              <div class="sensor-item">
-                <div class="sensor-name">${name}</div>
-                <div class="sensor-value">${value}${unit}</div>
-              </div>
-            `;
-          })}
-        </div>
+        ${fanSensors.length > 0 ? html`
+          <div class="sensor-grid">
+            ${fanSensors.slice(0, 6).map(entityId => {
+              const entity = this.hass.states[entityId];
+              if (!entity) return '';
+              
+              const name = this._getEntityName(entity);
+              const value = entity.state;
+              const unit = entity.attributes.unit_of_measurement || '';
+              
+              return html`
+                <div class="sensor-item">
+                  <div class="sensor-name">${name}</div>
+                  <div class="sensor-value">${value}${unit}</div>
+                </div>
+              `;
+            })}
+          </div>
+        ` : html`
+          <div class="no-data">No fan sensors found</div>
+        `}
       </div>
     `;
   }
@@ -573,43 +622,55 @@ class ThzCard extends LitElement {
   }
 
   _renderHeatingDetailsSection() {
-    // Find heating detail sensors (booster, heat circuit pump, power, integral)
-    const heatingDetailSensors = this._findEntitiesByPattern(/booster|pump|power|integral|heizleistung|leistung/i, 'sensor');
+    // Find heating detail sensors - broaden search to include more patterns
+    // Look for: booster, pump, circuit pump, heating power, compressor, stage
+    const heatingDetailSensors = this._findEntitiesByPattern(
+      /booster|pump|circuit.*pump|power|integral|heizleistung|leistung|compressor|verdichter|stage|stufe/i, 
+      'sensor'
+    );
     
-    if (heatingDetailSensors.length === 0 && !this.config.show_heating_details_graph) {
-      return '';
-    }
+    // Filter out energy consumption (that goes in energy section) and temperature sensors
+    const filteredSensors = heatingDetailSensors.filter(entityId => {
+      const lowerEntityId = entityId.toLowerCase();
+      // Exclude total energy consumption and temperatures
+      return !(/total.*energy|daily.*energy|temperature|temp/.test(lowerEntityId));
+    });
     
+    // Always show the Heating Details section
     return html`
       <div class="section">
         <div class="section-title">Heating Details</div>
-        ${this.config.show_heating_details_graph && heatingDetailSensors.length > 0 ? this._renderHeatingDetailsGraph(heatingDetailSensors) : ''}
-        <div class="sensor-grid">
-          ${heatingDetailSensors.slice(0, 6).map(entityId => {
-            const entity = this.hass.states[entityId];
-            if (!entity) return '';
-            
-            const name = this._getEntityName(entity);
-            const value = entity.state;
-            const unit = entity.attributes.unit_of_measurement || '';
-            
-            return html`
-              <div class="sensor-item">
-                <div class="sensor-name">${name}</div>
-                <div class="sensor-value">${value}${unit}</div>
-              </div>
-            `;
-          })}
-        </div>
+        ${this.config.show_heating_details_graph && filteredSensors.length > 0 ? this._renderHeatingDetailsGraph(filteredSensors) : ''}
+        ${filteredSensors.length > 0 ? html`
+          <div class="sensor-grid">
+            ${filteredSensors.slice(0, 6).map(entityId => {
+              const entity = this.hass.states[entityId];
+              if (!entity) return '';
+              
+              const name = this._getEntityName(entity);
+              const value = entity.state;
+              const unit = entity.attributes.unit_of_measurement || '';
+              
+              return html`
+                <div class="sensor-item">
+                  <div class="sensor-name">${name}</div>
+                  <div class="sensor-value">${value}${unit}</div>
+                </div>
+              `;
+            })}
+          </div>
+        ` : html`
+          <div class="no-data">No heating detail sensors found</div>
+        `}
       </div>
     `;
   }
 
   _renderEnergySection() {
-    // Find energy and power related sensors
-    const powerSensors = this._findEntitiesByPattern(/power|leistung|watt/i, 'sensor');
-    const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch/i, 'sensor');
-    const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad/i, 'sensor');
+    // Find energy and power related sensors - broaden search patterns
+    const powerSensors = this._findEntitiesByPattern(/power|leistung|watt|kw/i, 'sensor');
+    const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch|kwh/i, 'sensor');
+    const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad|coefficient/i, 'sensor');
 
     // Combine and deduplicate sensors (some entities might match multiple patterns)
     const allEnergySensors = [...new Set([...powerSensors, ...energySensors, ...copSensors])];
@@ -696,37 +757,65 @@ class ThzCard extends LitElement {
   }
 
   _renderModeSection() {
-    // Find mode/operation related entities
-    const modeSelects = this._findEntitiesByPattern(/mode|betriebsart/i, 'select');
+    // Find mode/operation related entities - broaden search
+    const modeSelects = this._findEntitiesByPattern(/mode|betriebsart|operation|operating/i, 'select');
     
+    // Also look for binary sensors or sensors that might indicate mode
+    const modeSensors = this._findEntitiesByPattern(/mode|betriebsart|operation|operating|state|status/i, 'sensor');
+    
+    // Always show the Operation Mode section
     return html`
       <div class="section">
         <div class="section-title">Operation Mode</div>
-        <div class="control-grid">
-          ${modeSelects.slice(0, 3).map(entityId => {
-            const entity = this.hass.states[entityId];
-            if (!entity) return '';
-            
-            const name = this._getEntityName(entity);
-            const currentValue = entity.state;
-            const options = entity.attributes.options || [];
-            
-            return html`
-              <div class="control-item">
-                <div class="control-name">${name}</div>
-                <select 
-                  @change=${(e) => this._handleSelectChange(entityId, e.target.value)}
-                  .value=${currentValue}>
-                  ${options.map(option => html`
-                    <option value="${option}" ?selected=${option === currentValue}>
-                      ${option}
-                    </option>
-                  `)}
-                </select>
-              </div>
-            `;
-          })}
-        </div>
+        ${modeSelects.length > 0 ? html`
+          <div class="control-grid">
+            ${modeSelects.slice(0, 3).map(entityId => {
+              const entity = this.hass.states[entityId];
+              if (!entity) return '';
+              
+              const name = this._getEntityName(entity);
+              const currentValue = entity.state;
+              const options = entity.attributes.options || [];
+              
+              return html`
+                <div class="control-item">
+                  <div class="control-name">${name}</div>
+                  <select 
+                    @change=${(e) => this._handleSelectChange(entityId, e.target.value)}
+                    .value=${currentValue}>
+                    ${options.map(option => html`
+                      <option value="${option}" ?selected=${option === currentValue}>
+                        ${option}
+                      </option>
+                    `)}
+                  </select>
+                </div>
+              `;
+            })}
+          </div>
+        ` : ''}
+        ${modeSensors.length > 0 ? html`
+          <div class="sensor-grid" style="margin-top: ${modeSelects.length > 0 ? '12px' : '0'}">
+            ${modeSensors.slice(0, 4).map(entityId => {
+              const entity = this.hass.states[entityId];
+              if (!entity) return '';
+              
+              const name = this._getEntityName(entity);
+              const value = entity.state;
+              const unit = entity.attributes.unit_of_measurement || '';
+              
+              return html`
+                <div class="sensor-item">
+                  <div class="sensor-name">${name}</div>
+                  <div class="sensor-value">${value}${unit}</div>
+                </div>
+              `;
+            })}
+          </div>
+        ` : ''}
+        ${modeSelects.length === 0 && modeSensors.length === 0 ? html`
+          <div class="no-data">No operation mode controls found</div>
+        ` : ''}
       </div>
     `;
   }
@@ -794,6 +883,7 @@ class ThzCard extends LitElement {
     // Find hot water related entities
     const dhwSwitches = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'switch');
     const dhwNumbers = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'number');
+    const dhwSensors = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'sensor');
     
     return html`
       <div class="section">
@@ -845,13 +935,145 @@ class ThzCard extends LitElement {
             `;
           })}
         </div>
+        ${dhwSensors.length > 0 ? html`
+          <div class="sensor-grid" style="margin-top: 12px;">
+            ${dhwSensors.slice(0, 4).map(entityId => {
+              const entity = this.hass.states[entityId];
+              if (!entity) return '';
+              
+              const name = this._getEntityName(entity);
+              const value = entity.state;
+              const unit = entity.attributes.unit_of_measurement || '';
+              
+              return html`
+                <div class="sensor-item">
+                  <div class="sensor-name">${name}</div>
+                  <div class="sensor-value">${value}${unit}</div>
+                </div>
+              `;
+            })}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  _renderCoolingSection() {
+    // Find cooling related entities (switches, numbers, sensors)
+    const coolingSwitches = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'switch');
+    const coolingNumbers = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'number');
+    const coolingSensors = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'sensor');
+    const coolingSelects = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'select');
+    
+    // If no cooling entities found, don't show the section
+    if (coolingSwitches.length === 0 && coolingNumbers.length === 0 && 
+        coolingSensors.length === 0 && coolingSelects.length === 0) {
+      return '';
+    }
+    
+    return html`
+      <div class="section cooling-section">
+        <div class="section-title">❄️ Cooling</div>
+        <div class="control-grid">
+          ${coolingSwitches.slice(0, 2).map(entityId => {
+            const entity = this.hass.states[entityId];
+            if (!entity) return '';
+            
+            const name = this._getEntityName(entity);
+            const isOn = entity.state === 'on';
+            
+            return html`
+              <div class="control-item">
+                <div class="control-name">${name}</div>
+                <button 
+                  class="switch-button ${isOn ? 'on' : 'off'}"
+                  @click=${() => this._handleSwitchToggle(entityId, !isOn)}>
+                  ${isOn ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            `;
+          })}
+          ${coolingSelects.slice(0, 2).map(entityId => {
+            const entity = this.hass.states[entityId];
+            if (!entity) return '';
+            
+            const name = this._getEntityName(entity);
+            const currentValue = entity.state;
+            const options = entity.attributes.options || [];
+            
+            return html`
+              <div class="control-item">
+                <div class="control-name">${name}</div>
+                <select 
+                  @change=${(e) => this._handleSelectChange(entityId, e.target.value)}
+                  .value=${currentValue}>
+                  ${options.map(option => html`
+                    <option value="${option}" ?selected=${option === currentValue}>
+                      ${option}
+                    </option>
+                  `)}
+                </select>
+              </div>
+            `;
+          })}
+          ${coolingNumbers.slice(0, 2).map(entityId => {
+            const entity = this.hass.states[entityId];
+            if (!entity) return '';
+            
+            const name = this._getEntityName(entity);
+            const value = entity.state;
+            const min = entity.attributes.min || 0;
+            const max = entity.attributes.max || 100;
+            const step = entity.attributes.step || 1;
+            const unit = entity.attributes.unit_of_measurement || '';
+            
+            return html`
+              <div class="control-item">
+                <div class="control-name">${name}</div>
+                <div class="number-control">
+                  <input 
+                    type="number" 
+                    .value=${value}
+                    min=${min}
+                    max=${max}
+                    step=${step}
+                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}>
+                  <span class="unit">${unit}</span>
+                </div>
+              </div>
+            `;
+          })}
+        </div>
+        ${coolingSensors.length > 0 ? html`
+          <div class="sensor-grid" style="margin-top: 12px;">
+            ${coolingSensors.slice(0, 4).map(entityId => {
+              const entity = this.hass.states[entityId];
+              if (!entity) return '';
+              
+              const name = this._getEntityName(entity);
+              const value = entity.state;
+              const unit = entity.attributes.unit_of_measurement || '';
+              
+              return html`
+                <div class="sensor-item">
+                  <div class="sensor-name">${name}</div>
+                  <div class="sensor-value">${value}${unit}</div>
+                </div>
+              `;
+            })}
+          </div>
+        ` : ''}
       </div>
     `;
   }
 
   _renderAdditionalControls() {
-    // Find any remaining important switches
-    const otherSwitches = this._findEntitiesByPattern(/cooling|emergency|party|holiday/i, 'switch');
+    // Find any remaining important switches (excluding cooling which has its own section)
+    const allOtherSwitches = this._findEntitiesByPattern(/emergency|party|holiday|vacation|urlaub/i, 'switch');
+    // Filter out cooling switches as they now have their own section
+    const otherSwitches = allOtherSwitches.filter(entityId => 
+      !/cooling|k[üu]hl/i.test(entityId)
+    );
     
     if (otherSwitches.length === 0) return '';
     
@@ -996,8 +1218,14 @@ class ThzCard extends LitElement {
         // Check domain if specified
         if (domain && !entityId.startsWith(domain + '.')) return false;
         
-        // Check pattern
-        return pattern.test(entityId) || pattern.test(entity.attributes.friendly_name || '');
+        // Check pattern - now also check the entity name part after the domain
+        const entityName = entityId.includes('.') ? entityId.split('.')[1] : entityId;
+        const friendlyName = entity.attributes.friendly_name || '';
+        
+        // Test against entity ID, entity name (without domain), and friendly name
+        return pattern.test(entityId) || 
+               pattern.test(entityName) || 
+               pattern.test(friendlyName);
       })
       .map(([entityId]) => entityId);
   }
@@ -1460,6 +1688,19 @@ class ThzCard extends LitElement {
       .error-value {
         font-size: 13px;
         color: var(--secondary-text-color);
+      }
+
+      .no-data {
+        padding: 16px;
+        text-align: center;
+        color: var(--secondary-text-color);
+        font-size: 14px;
+        font-style: italic;
+      }
+
+      .cooling-section {
+        border-color: #2196f3;
+        background: rgba(33, 150, 243, 0.03);
       }
 
       @media (max-width: 600px) {
