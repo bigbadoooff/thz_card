@@ -193,8 +193,9 @@ class ThzCard extends LitElement {
   }
 
   _renderStatusBadge() {
-    // Find status/state sensors
-    const statusSensors = this._findEntitiesByPattern(/state|status|mode|betrieb/i, 'sensor');
+    // Find status/state sensors - broaden search patterns
+    // Look for: state, status, mode, operation, betrieb, zustand
+    const statusSensors = this._findEntitiesByPattern(/state|status|mode|betrieb|operation|operating|zustand/i, 'sensor');
     
     if (statusSensors.length === 0) {
       return html``;
@@ -234,11 +235,11 @@ class ThzCard extends LitElement {
   }
 
   _renderStatistics() {
-    // Find various statistics sensors
-    const runtimeSensors = this._findEntitiesByPattern(/runtime|laufzeit|operating.*time/i, 'sensor');
-    const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch/i, 'sensor');
-    const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad/i, 'sensor');
-    const compressorSensors = this._findEntitiesByPattern(/compressor|verdichter/i, 'sensor');
+    // Find various statistics sensors - broaden search patterns
+    const runtimeSensors = this._findEntitiesByPattern(/runtime|laufzeit|operating.*time|betriebszeit|hours|stunden/i, 'sensor');
+    const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch|kwh/i, 'sensor');
+    const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad|coefficient/i, 'sensor');
+    const compressorSensors = this._findEntitiesByPattern(/compressor|verdichter|starts|cycles/i, 'sensor');
 
     const stats = [];
 
@@ -666,10 +667,10 @@ class ThzCard extends LitElement {
   }
 
   _renderEnergySection() {
-    // Find energy and power related sensors
-    const powerSensors = this._findEntitiesByPattern(/power|leistung|watt/i, 'sensor');
-    const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch/i, 'sensor');
-    const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad/i, 'sensor');
+    // Find energy and power related sensors - broaden search patterns
+    const powerSensors = this._findEntitiesByPattern(/power|leistung|watt|kw/i, 'sensor');
+    const energySensors = this._findEntitiesByPattern(/energy|energie|consumption|verbrauch|kwh/i, 'sensor');
+    const copSensors = this._findEntitiesByPattern(/cop|efficiency|wirkungsgrad|coefficient/i, 'sensor');
 
     // Combine and deduplicate sensors (some entities might match multiple patterns)
     const allEnergySensors = [...new Set([...powerSensors, ...energySensors, ...copSensors])];
