@@ -545,8 +545,8 @@ class ThzCard extends LitElement {
   }
 
   _renderFanSection() {
-    // Find fan-related sensors
-    const fanSensors = this._findEntitiesByPattern(/fan|l[üu]fter|ventilat/i, 'sensor');
+    // Find fan-related sensors - broaden search patterns
+    const fanSensors = this._findEntitiesByPattern(/fan|l[üu]fter|ventilat|speed|rpm|drehzahl/i, 'sensor');
     
     // Always show the Fan Values section
     return html`
@@ -621,17 +621,28 @@ class ThzCard extends LitElement {
   }
 
   _renderHeatingDetailsSection() {
-    // Find heating detail sensors (booster, heat circuit pump, power, integral)
-    const heatingDetailSensors = this._findEntitiesByPattern(/booster|pump|power|integral|heizleistung|leistung/i, 'sensor');
+    // Find heating detail sensors - broaden search to include more patterns
+    // Look for: booster, pump, circuit pump, heating power, compressor, stage
+    const heatingDetailSensors = this._findEntitiesByPattern(
+      /booster|pump|circuit.*pump|power|integral|heizleistung|leistung|compressor|verdichter|stage|stufe/i, 
+      'sensor'
+    );
+    
+    // Filter out energy consumption (that goes in energy section) and temperature sensors
+    const filteredSensors = heatingDetailSensors.filter(entityId => {
+      const lowerEntityId = entityId.toLowerCase();
+      // Exclude total energy consumption and temperatures
+      return !(/total.*energy|daily.*energy|temperature|temp/.test(lowerEntityId));
+    });
     
     // Always show the Heating Details section
     return html`
       <div class="section">
         <div class="section-title">Heating Details</div>
-        ${this.config.show_heating_details_graph && heatingDetailSensors.length > 0 ? this._renderHeatingDetailsGraph(heatingDetailSensors) : ''}
-        ${heatingDetailSensors.length > 0 ? html`
+        ${this.config.show_heating_details_graph && filteredSensors.length > 0 ? this._renderHeatingDetailsGraph(filteredSensors) : ''}
+        ${filteredSensors.length > 0 ? html`
           <div class="sensor-grid">
-            ${heatingDetailSensors.slice(0, 6).map(entityId => {
+            ${filteredSensors.slice(0, 6).map(entityId => {
               const entity = this.hass.states[entityId];
               if (!entity) return '';
               
@@ -745,8 +756,11 @@ class ThzCard extends LitElement {
   }
 
   _renderModeSection() {
-    // Find mode/operation related entities
-    const modeSelects = this._findEntitiesByPattern(/mode|betriebsart/i, 'select');
+    // Find mode/operation related entities - broaden search
+    const modeSelects = this._findEntitiesByPattern(/mode|betriebsart|operation|operating/i, 'select');
+    
+    // Also look for binary sensors or sensors that might indicate mode
+    const modeSensors = this._findEntitiesByPattern(/mode|betriebsart|operation|operating|state|status/i, 'sensor');
     
     // Always show the Operation Mode section
     return html`
@@ -778,9 +792,29 @@ class ThzCard extends LitElement {
               `;
             })}
           </div>
-        ` : html`
+        ` : ''}
+        ${modeSensors.length > 0 ? html`
+          <div class="sensor-grid" style="margin-top: ${modeSelects.length > 0 ? '12px' : '0'}">
+            ${modeSensors.slice(0, 4).map(entityId => {
+              const entity = this.hass.states[entityId];
+              if (!entity) return '';
+              
+              const name = this._getEntityName(entity);
+              const value = entity.state;
+              const unit = entity.attributes.unit_of_measurement || '';
+              
+              return html`
+                <div class="sensor-item">
+                  <div class="sensor-name">${name}</div>
+                  <div class="sensor-value">${value}${unit}</div>
+                </div>
+              `;
+            })}
+          </div>
+        ` : ''}
+        ${modeSelects.length === 0 && modeSensors.length === 0 ? html`
           <div class="no-data">No operation mode controls found</div>
-        `}
+        ` : ''}
       </div>
     `;
   }
@@ -1183,8 +1217,14 @@ class ThzCard extends LitElement {
         // Check domain if specified
         if (domain && !entityId.startsWith(domain + '.')) return false;
         
-        // Check pattern
-        return pattern.test(entityId) || pattern.test(entity.attributes.friendly_name || '');
+        // Check pattern - now also check the entity name part after the domain
+        const entityName = entityId.includes('.') ? entityId.split('.')[1] : entityId;
+        const friendlyName = entity.attributes.friendly_name || '';
+        
+        // Test against entity ID, entity name (without domain), and friendly name
+        return pattern.test(entityId) || 
+               pattern.test(entityName) || 
+               pattern.test(friendlyName);
       })
       .map(([entityId]) => entityId);
   }
