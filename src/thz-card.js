@@ -332,7 +332,9 @@ class ThzCard extends LitElement {
     }
     
     // Load history data when component is first rendered
-    if (!this._historyData[sensorsToGraph[0]]) {
+    // Check if any of the sensors need data loaded
+    const needsData = sensorsToGraph.some(entityId => !this._historyData[entityId]);
+    if (needsData && !this._loadingHistory) {
       this._loadHistoryData(sensorsToGraph);
     }
 
@@ -528,15 +530,24 @@ class ThzCard extends LitElement {
           });
 
           if (history && history[0]) {
-            this._historyData[entityId] = history[0];
+            return { entityId, data: history[0] };
           }
+          return { entityId, data: [] };
         } catch (err) {
           console.error(`Failed to load history for ${entityId}:`, err);
-          this._historyData[entityId] = [];
+          return { entityId, data: [] };
         }
       });
 
-      await Promise.all(promises);
+      const results = await Promise.all(promises);
+      
+      // Create a new object to trigger Lit's reactivity
+      const newHistoryData = { ...this._historyData };
+      results.forEach(result => {
+        newHistoryData[result.entityId] = result.data;
+      });
+      this._historyData = newHistoryData;
+      
       this.requestUpdate();
     } catch (error) {
       console.error('Failed to load history data:', error);
@@ -586,7 +597,9 @@ class ThzCard extends LitElement {
       return '';
     }
     
-    if (!this._historyData[sensorsToGraph[0]]) {
+    // Check if any of the sensors need data loaded
+    const needsData = sensorsToGraph.some(entityId => !this._historyData[entityId]);
+    if (needsData && !this._loadingHistory) {
       this._loadHistoryData(sensorsToGraph);
     }
 
@@ -721,7 +734,9 @@ class ThzCard extends LitElement {
       return '';
     }
     
-    if (!this._historyData[sensorsToGraph[0]]) {
+    // Check if any of the sensors need data loaded
+    const needsData = sensorsToGraph.some(entityId => !this._historyData[entityId]);
+    if (needsData && !this._loadingHistory) {
       this._loadHistoryData(sensorsToGraph);
     }
 
