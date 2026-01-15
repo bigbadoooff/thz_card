@@ -20,8 +20,8 @@ THZ Card is a custom card for Home Assistant that provides a comprehensive inter
 ```
 thz_card/
 ├── src/
-│   ├── thz-card.js           # Main card component (1720 lines)
-│   └── thz-card-editor.js    # Visual configuration editor (392 lines)
+│   ├── thz-card.js           # Main card component (~1720 lines)
+│   └── thz-card-editor.js    # Visual configuration editor (~392 lines)
 ├── dist/
 │   └── thz-card.js           # Built and minified bundle
 ├── .github/
@@ -105,8 +105,8 @@ static get styles() {
 ### Code Style
 
 - **Indentation**: 2 spaces (no tabs)
-- **Quotes**: Use single quotes for strings (except HTML templates)
-- **Template Literals**: Use backticks for HTML templates with Lit
+- **Quotes**: Use single quotes for strings; use backticks for HTML templates with Lit
+- **Template Literals**: Use `html` tagged template literals for Lit HTML
 - **Naming Conventions**:
   - Private properties/methods: Prefix with underscore `_methodName`
   - Event handlers: Prefix with underscore `_handleClick`
@@ -167,9 +167,9 @@ The main component renders multiple sections:
 1. **Header**: Card title, status badge
 2. **Statistics Dashboard**: Runtime, energy, COP metrics
 3. **Temperature Section**: Grid of temperature sensors
-4. **Temperature Graph**: Historical temperature trends (using ha-chart-base)
-5. **Fan Graph**: Fan values over time
-6. **Heating Details Graph**: Booster stage, pump, power consumption
+4. **Temperature Graph**: Historical temperature trends (custom SVG rendering)
+5. **Fan Graph**: Fan values over time (custom SVG rendering)
+6. **Heating Details Graph**: Booster stage, pump, power consumption (custom SVG rendering)
 7. **Energy & Efficiency**: Power, energy, COP display
 8. **Errors & Alerts**: System warnings and errors
 9. **Operation Mode**: Mode selection controls
