@@ -518,36 +518,38 @@ class ThzCard extends LitElement {
     const startTime = new Date(endTime.getTime() - hours * 60 * 60 * 1000);
 
     try {
-      const promises = entityIds.map(async entityId => {
-        try {
-          const history = await this.hass.callWS({
-            type: 'history/history_during_period',
-            start_time: startTime.toISOString(),
-            end_time: endTime.toISOString(),
-            entity_ids: [entityId],
-            minimal_response: true,
-            significant_changes_only: false,
-          });
+      // Use REST API instead of WebSocket for better compatibility
+      // Encode each entity ID to handle special characters
+      const entityIdsParam = entityIds.map(id => encodeURIComponent(id)).join(',');
+      const history = await this.hass.callApi(
+        'GET',
+        `history/period/${startTime.toISOString()}?filter_entity_id=${entityIdsParam}&end_time=${endTime.toISOString()}&minimal_response`
+      );
 
-          if (history && history[0]) {
-            return { entityId, data: history[0] };
-          }
-          return { entityId, data: [] };
-        } catch (err) {
-          console.error(`Failed to load history for ${entityId}:`, err);
-          return { entityId, data: [] };
-        }
-      });
-
-      const results = await Promise.all(promises);
-      
       // Create a new object to trigger Lit's reactivity
       const newHistoryData = { ...this._historyData };
-      results.forEach(result => {
-        newHistoryData[result.entityId] = result.data;
-      });
-      this._historyData = newHistoryData;
       
+      // Process the response - REST API returns an array of arrays
+      // Map by entity_id since order is not guaranteed
+      if (history && Array.isArray(history)) {
+        history.forEach(entityHistory => {
+          if (entityHistory && entityHistory.length > 0 && entityHistory[0].entity_id) {
+            const entityId = entityHistory[0].entity_id;
+            if (entityIds.includes(entityId)) {
+              newHistoryData[entityId] = entityHistory;
+            }
+          }
+        });
+        
+        // Initialize empty arrays for entities with no history data
+        entityIds.forEach(entityId => {
+          if (!newHistoryData[entityId]) {
+            newHistoryData[entityId] = [];
+          }
+        });
+      }
+      
+      this._historyData = newHistoryData;
       this.requestUpdate();
     } catch (error) {
       console.error('Failed to load history data:', error);
