@@ -519,7 +519,8 @@ class ThzCard extends LitElement {
 
     try {
       // Use REST API instead of WebSocket for better compatibility
-      const entityIdsParam = entityIds.join(',');
+      // Encode each entity ID to handle special characters
+      const entityIdsParam = entityIds.map(id => encodeURIComponent(id)).join(',');
       const history = await this.hass.callApi(
         'GET',
         `history/period/${startTime.toISOString()}?filter_entity_id=${entityIdsParam}&end_time=${endTime.toISOString()}&minimal_response`
@@ -529,11 +530,20 @@ class ThzCard extends LitElement {
       const newHistoryData = { ...this._historyData };
       
       // Process the response - REST API returns an array of arrays
+      // Map by entity_id since order is not guaranteed
       if (history && Array.isArray(history)) {
-        entityIds.forEach((entityId, index) => {
-          if (history[index]) {
-            newHistoryData[entityId] = history[index];
-          } else {
+        history.forEach(entityHistory => {
+          if (entityHistory && entityHistory.length > 0 && entityHistory[0].entity_id) {
+            const entityId = entityHistory[0].entity_id;
+            if (entityIds.includes(entityId)) {
+              newHistoryData[entityId] = entityHistory;
+            }
+          }
+        });
+        
+        // Initialize empty arrays for entities with no history data
+        entityIds.forEach(entityId => {
+          if (!newHistoryData[entityId]) {
             newHistoryData[entityId] = [];
           }
         });

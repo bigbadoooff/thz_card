@@ -390,7 +390,7 @@ const x=globalThis,w=t=>t,E=x.trustedTypes,S=E?E.createPolicy("lit-html",{create
           `)}
         </g>
       </svg>
-    `}async _loadHistoryData(t){if(this._loadingHistory)return;this._loadingHistory=!0;const e=this.config.graph_hours||24,s=new Date,i=new Date(s.getTime()-60*e*60*1e3);try{const e=t.join(","),r=await this.hass.callApi("GET",`history/period/${i.toISOString()}?filter_entity_id=${e}&end_time=${s.toISOString()}&minimal_response`),o={...this._historyData};r&&Array.isArray(r)&&t.forEach((t,e)=>{r[e]?o[t]=r[e]:o[t]=[]}),this._historyData=o,this.requestUpdate()}catch(t){console.error("Failed to load history data:",t)}finally{this._loadingHistory=!1}}_renderFanSection(){const t=this._findEntitiesByPattern(/fan|l[üu]fter|ventilat|speed|rpm|drehzahl/i,"sensor");return j`
+    `}async _loadHistoryData(t){if(this._loadingHistory)return;this._loadingHistory=!0;const e=this.config.graph_hours||24,s=new Date,i=new Date(s.getTime()-60*e*60*1e3);try{const e=t.map(t=>encodeURIComponent(t)).join(","),r=await this.hass.callApi("GET",`history/period/${i.toISOString()}?filter_entity_id=${e}&end_time=${s.toISOString()}&minimal_response`),o={...this._historyData};r&&Array.isArray(r)&&(r.forEach(e=>{if(e&&e.length>0&&e[0].entity_id){const s=e[0].entity_id;t.includes(s)&&(o[s]=e)}}),t.forEach(t=>{o[t]||(o[t]=[])})),this._historyData=o,this.requestUpdate()}catch(t){console.error("Failed to load history data:",t)}finally{this._loadingHistory=!1}}_renderFanSection(){const t=this._findEntitiesByPattern(/fan|l[üu]fter|ventilat|speed|rpm|drehzahl/i,"sensor");return j`
       <div class="section">
         <div class="section-title">Fan Values</div>
         ${this.config.show_fan_graph&&t.length>0?this._renderFanGraph(t):""}
