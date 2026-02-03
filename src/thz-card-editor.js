@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'lit';
+import { findEntitiesByPattern } from './utils.js';
 
 class ThzCardEditor extends LitElement {
   static get properties() {
@@ -20,10 +21,6 @@ class ThzCardEditor extends LitElement {
 
   setConfig(config) {
     this.config = config;
-    // Initialize selected_entities if not present
-    if (!this.config.selected_entities) {
-      this.config.selected_entities = this._getEmptySelectedEntities();
-    }
     // Discover entities when config is set
     this._discoverEntities();
   }
@@ -421,55 +418,8 @@ class ThzCardEditor extends LitElement {
       additional: [],
     };
 
-    // Helper function to find entities (copied from main card logic)
-    const findEntitiesByPattern = (pattern, domain = null) => {
-      if (!this.hass) return [];
-      
-      // Get device entities if device_id is specified
-      let deviceEntityIds = null;
-      if (this.config.device_id && this.hass.devices && this.hass.entities) {
-        deviceEntityIds = Object.entries(this.hass.entities)
-          .filter(([entityId, entity]) => entity.device_id === this.config.device_id)
-          .map(([entityId]) => entityId);
-      }
-      
-      return Object.entries(this.hass.states)
-        .filter(([entityId, entity]) => {
-          if (!entity || !entity.attributes) return false;
-          
-          if (deviceEntityIds && !deviceEntityIds.includes(entityId)) {
-            return false;
-          }
-          
-          if (this.config.entity_filter && !entityId.toLowerCase().includes(this.config.entity_filter.toLowerCase())) {
-            return false;
-          }
-          
-          const skipTHZCheck = this.config.entity_filter || this.config.device_id;
-          const matchesTHZ = skipTHZCheck || 
-                            entityId.toLowerCase().includes('thz') || 
-                            entityId.toLowerCase().includes('tecalor') ||
-                            entityId.toLowerCase().includes('lwz') ||
-                            entity.attributes.integration === 'thz' ||
-                            (entity.attributes.device_class && 
-                             JSON.stringify(entity.attributes).toLowerCase().includes('thz'));
-          
-          if (!matchesTHZ) return false;
-          
-          if (domain && !entityId.startsWith(domain + '.')) return false;
-          
-          const entityName = entityId.includes('.') ? entityId.split('.')[1] : entityId;
-          const friendlyName = entity.attributes.friendly_name || '';
-          
-          return pattern.test(entityId) || 
-                 pattern.test(entityName) || 
-                 pattern.test(friendlyName);
-        })
-        .map(([entityId]) => entityId);
-    };
-
     // Temperature sensors
-    const allTempSensors = findEntitiesByPattern(/temperature|temp/i, 'sensor');
+    const allTempSensors = findEntitiesByPattern(this.hass, this.config, /temperature|temp/i, 'sensor');
     discovered.temperature = allTempSensors.filter(entityId => {
       // Exclude HC1 settings
       if (/hc1.*set|hc1.*soll|heating.*circuit.*1.*set/i.test(entityId)) {
@@ -479,30 +429,30 @@ class ThzCardEditor extends LitElement {
     });
 
     // Mode entities (consistent order: selects first, then sensors)
-    const modeSelects = findEntitiesByPattern(/mode|betriebsart|operation|operating/i, 'select');
-    const modeSensors = findEntitiesByPattern(/mode|betriebsart|operation|operating|state|status/i, 'sensor');
+    const modeSelects = findEntitiesByPattern(this.hass, this.config, /mode|betriebsart|operation|operating/i, 'select');
+    const modeSensors = findEntitiesByPattern(this.hass, this.config, /mode|betriebsart|operation|operating|state|status/i, 'sensor');
     discovered.mode = [...modeSelects, ...modeSensors];
 
     // Heating circuit entities (consistent order: switches, then numbers)
-    const hcSwitches = findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'switch');
-    const hcNumbers = findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'number');
+    const hcSwitches = findEntitiesByPattern(this.hass, this.config, /hc1|heating.*circuit.*1|heizkreis.*1/i, 'switch');
+    const hcNumbers = findEntitiesByPattern(this.hass, this.config, /hc1|heating.*circuit.*1|heizkreis.*1/i, 'number');
     discovered.heating_circuit = [...hcSwitches, ...hcNumbers];
 
     // Hot water entities (consistent order: switches, numbers, then sensors)
-    const dhwSwitches = findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'switch');
-    const dhwNumbers = findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'number');
-    const dhwSensors = findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'sensor');
+    const dhwSwitches = findEntitiesByPattern(this.hass, this.config, /dhw|hot.*water|warmwasser/i, 'switch');
+    const dhwNumbers = findEntitiesByPattern(this.hass, this.config, /dhw|hot.*water|warmwasser/i, 'number');
+    const dhwSensors = findEntitiesByPattern(this.hass, this.config, /dhw|hot.*water|warmwasser/i, 'sensor');
     discovered.hot_water = [...dhwSwitches, ...dhwNumbers, ...dhwSensors];
 
     // Cooling entities (consistent order: switches, numbers, sensors, then selects)
-    const coolingSwitches = findEntitiesByPattern(/cooling|k[üu]hl/i, 'switch');
-    const coolingNumbers = findEntitiesByPattern(/cooling|k[üu]hl/i, 'number');
-    const coolingSensors = findEntitiesByPattern(/cooling|k[üu]hl/i, 'sensor');
-    const coolingSelects = findEntitiesByPattern(/cooling|k[üu]hl/i, 'select');
+    const coolingSwitches = findEntitiesByPattern(this.hass, this.config, /cooling|k[üu]hl/i, 'switch');
+    const coolingNumbers = findEntitiesByPattern(this.hass, this.config, /cooling|k[üu]hl/i, 'number');
+    const coolingSensors = findEntitiesByPattern(this.hass, this.config, /cooling|k[üu]hl/i, 'sensor');
+    const coolingSelects = findEntitiesByPattern(this.hass, this.config, /cooling|k[üu]hl/i, 'select');
     discovered.cooling = [...coolingSwitches, ...coolingNumbers, ...coolingSensors, ...coolingSelects];
 
     // Additional controls
-    const allOtherSwitches = findEntitiesByPattern(/emergency|party|holiday|vacation|urlaub/i, 'switch');
+    const allOtherSwitches = findEntitiesByPattern(this.hass, this.config, /emergency|party|holiday|vacation|urlaub/i, 'switch');
     discovered.additional = allOtherSwitches.filter(entityId => 
       !/cooling|k[üu]hl/i.test(entityId)
     );
