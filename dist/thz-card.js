@@ -327,12 +327,12 @@ const w=globalThis,x=t=>t,E=w.trustedTypes,S=E?E.createPolicy("lit-html",{create
           `)}
         </div>
       </div>
-    `}_renderTemperatureGraph(t){const e=t.slice(0,4);return 0===e.length?"":this._renderHistoryGraph(e,"temperature-graph",`Temperature History (${this.config.graph_hours||24}h)`)}_renderHistoryGraph(t,e,s){const i=this.config.graph_hours||24,r=t.map(t=>{const e=this.hass.states[t];return{entity:t,name:e?this._getEntityName(e):t}});return j`
+    `}_renderTemperatureGraph(t){const e=t.slice(0,4);return 0===e.length?"":this._renderHistoryGraph(e,`Temperature History (${this.config.graph_hours||24}h)`)}_renderHistoryGraph(t,e){const s=this.config.graph_hours||24,i=t.map(t=>{const e=this.hass.states[t];return{entity:t,name:e?this._getEntityName(e):t}});return j`
       <div class="history-graph-container">
-        <div class="graph-title">${s}</div>
+        <div class="graph-title">${e}</div>
         <hui-history-graph-card
           .hass=${this.hass}
-          .config=${{type:"history-graph",entities:r,hours_to_show:i,refresh_interval:0}}
+          .config=${{type:"history-graph",entities:i,hours_to_show:s,refresh_interval:0}}
         ></hui-history-graph-card>
       </div>
     `}_renderFanSection(){const t=this._findEntitiesByPattern(/fan|l[üu]fter|ventilat|speed|rpm|drehzahl/i,"sensor");return j`
@@ -352,7 +352,7 @@ const w=globalThis,x=t=>t,E=w.trustedTypes,S=E?E.createPolicy("lit-html",{create
           <div class="no-data">No fan sensors found</div>
         `}
       </div>
-    `}_renderFanGraph(t){const e=t.slice(0,4);return 0===e.length?"":this._renderHistoryGraph(e,"fan-graph",`Fan History (${this.config.graph_hours||24}h)`)}_renderHeatingDetailsSection(){const t=this._findEntitiesByPattern(/booster|pump|circuit.*pump|power|integral|heizleistung|leistung|compressor|verdichter|stage|stufe/i,"sensor").filter(t=>{const e=t.toLowerCase();return!/total.*energy|daily.*energy|temperature|temp/.test(e)});return j`
+    `}_renderFanGraph(t){const e=t.slice(0,4);return 0===e.length?"":this._renderHistoryGraph(e,`Fan History (${this.config.graph_hours||24}h)`)}_renderHeatingDetailsSection(){const t=this._findEntitiesByPattern(/booster|pump|circuit.*pump|power|integral|heizleistung|leistung|compressor|verdichter|stage|stufe/i,"sensor").filter(t=>{const e=t.toLowerCase();return!/total.*energy|daily.*energy|temperature|temp/.test(e)});return j`
       <div class="section">
         <div class="section-title">Heating Details</div>
         ${this.config.show_heating_details_graph&&t.length>0?this._renderHeatingDetailsGraph(t):""}
@@ -381,7 +381,7 @@ const w=globalThis,x=t=>t,E=w.trustedTypes,S=E?E.createPolicy("lit-html",{create
             `})}
         </div>
       </div>
-    `}_renderHeatingDetailsGraph(t){const e=t.slice(0,4);return 0===e.length?"":this._renderHistoryGraph(e,"heating-details-graph",`Heating Details History (${this.config.graph_hours||24}h)`)}_renderModeSection(){const t=this._findEntitiesByPattern(/mode|betriebsart|operation|operating/i,"select"),e=this._findEntitiesByPattern(/mode|betriebsart|operation|operating|state|status/i,"sensor");return j`
+    `}_renderHeatingDetailsGraph(t){const e=t.slice(0,4);return 0===e.length?"":this._renderHistoryGraph(e,`Heating Details History (${this.config.graph_hours||24}h)`)}_renderModeSection(){const t=this._findEntitiesByPattern(/mode|betriebsart|operation|operating/i,"select"),e=this._findEntitiesByPattern(/mode|betriebsart|operation|operating|state|status/i,"sensor");return j`
       <div class="section">
         <div class="section-title">Operation Mode</div>
         ${t.length>0?j`

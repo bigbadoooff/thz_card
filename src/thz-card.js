@@ -324,14 +324,14 @@ class ThzCard extends LitElement {
       return '';
     }
     
-    return this._renderHistoryGraph(sensorsToGraph, 'temperature-graph', `Temperature History (${this.config.graph_hours || 24}h)`);
+    return this._renderHistoryGraph(sensorsToGraph, `Temperature History (${this.config.graph_hours || 24}h)`);
   }
 
   /**
    * Creates an embedded HA history-graph card for displaying sensor history
    * Uses Home Assistant's internal graph rendering for reliable graph display
    */
-  _renderHistoryGraph(entityIds, graphId, title) {
+  _renderHistoryGraph(entityIds, title) {
     const hours = this.config.graph_hours || 24;
     
     // Create entities config for history-graph
@@ -398,7 +398,7 @@ class ThzCard extends LitElement {
       return '';
     }
     
-    return this._renderHistoryGraph(sensorsToGraph, 'fan-graph', `Fan History (${this.config.graph_hours || 24}h)`);
+    return this._renderHistoryGraph(sensorsToGraph, `Fan History (${this.config.graph_hours || 24}h)`);
   }
 
   _renderHeatingDetailsSection() {
@@ -501,7 +501,7 @@ class ThzCard extends LitElement {
       return '';
     }
     
-    return this._renderHistoryGraph(sensorsToGraph, 'heating-details-graph', `Heating Details History (${this.config.graph_hours || 24}h)`);
+    return this._renderHistoryGraph(sensorsToGraph, `Heating Details History (${this.config.graph_hours || 24}h)`);
   }
 
   _renderModeSection() {
