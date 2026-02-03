@@ -119,19 +119,29 @@ class ThzCard extends LitElement {
   _renderTemperatureSection() {
     if (!this.config.show_temperature) return '';
 
-    // Find specific temperature sensors (excluding HC1 settings)
-    // Focus on: room temp, outside temp, flow temp, return temp
-    const allTempSensors = this._findEntitiesByPattern(/temperature|temp/i, 'sensor');
+    // Check if we have selected entities for temperature
+    const selectedEntities = this._getEntitiesForSection('temperature');
     
-    // Filter out HC1 settings - only keep actual temperature readings
-    const tempSensors = allTempSensors.filter(entityId => {
-      // Exclude HC1 settings (these are configuration values, not sensors)
-      if (/hc1.*set|hc1.*soll|heating.*circuit.*1.*set/i.test(entityId)) {
-        return false;
-      }
-      // Include room, outside, flow, return, and other actual temperature sensors
-      return true;
-    });
+    let tempSensors;
+    if (selectedEntities) {
+      // Use selected entities
+      tempSensors = selectedEntities;
+    } else {
+      // Fall back to auto-discovery
+      // Find specific temperature sensors (excluding HC1 settings)
+      // Focus on: room temp, outside temp, flow temp, return temp
+      const allTempSensors = this._findEntitiesByPattern(/temperature|temp/i, 'sensor');
+      
+      // Filter out HC1 settings - only keep actual temperature readings
+      tempSensors = allTempSensors.filter(entityId => {
+        // Exclude HC1 settings (these are configuration values, not sensors)
+        if (/hc1.*set|hc1.*soll|heating.*circuit.*1.*set/i.test(entityId)) {
+          return false;
+        }
+        // Include room, outside, flow, return, and other actual temperature sensors
+        return true;
+      });
+    }
     
     // For graph, prioritize key temperatures: room, outside, flow, return
     const graphSensors = this._getKeyTemperatureSensors(tempSensors);
@@ -528,11 +538,21 @@ class ThzCard extends LitElement {
   }
 
   _renderModeSection() {
-    // Find mode/operation related entities - broaden search
-    const modeSelects = this._findEntitiesByPattern(/mode|betriebsart|operation|operating/i, 'select');
+    // Check if we have selected entities for mode
+    const selectedEntities = this._getEntitiesForSection('mode');
     
-    // Also look for binary sensors or sensors that might indicate mode
-    const modeSensors = this._findEntitiesByPattern(/mode|betriebsart|operation|operating|state|status/i, 'sensor');
+    let modeSelects, modeSensors;
+    if (selectedEntities) {
+      // Use selected entities, separating by domain
+      modeSelects = selectedEntities.filter(id => id.startsWith('select.'));
+      modeSensors = selectedEntities.filter(id => id.startsWith('sensor.'));
+    } else {
+      // Fall back to auto-discovery
+      // Find mode/operation related entities - broaden search
+      modeSelects = this._findEntitiesByPattern(/mode|betriebsart|operation|operating/i, 'select');
+      // Also look for binary sensors or sensors that might indicate mode
+      modeSensors = this._findEntitiesByPattern(/mode|betriebsart|operation|operating|state|status/i, 'sensor');
+    }
     
     // Always show the Operation Mode section
     return html`
@@ -592,9 +612,20 @@ class ThzCard extends LitElement {
   }
 
   _renderHeatingCircuitSection() {
-    // Find heating circuit related entities
-    const hcNumbers = this._findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'number');
-    const hcSwitches = this._findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'switch');
+    // Check if we have selected entities for heating circuit
+    const selectedEntities = this._getEntitiesForSection('heating_circuit');
+    
+    let hcNumbers, hcSwitches;
+    if (selectedEntities) {
+      // Use selected entities, separating by domain
+      hcNumbers = selectedEntities.filter(id => id.startsWith('number.'));
+      hcSwitches = selectedEntities.filter(id => id.startsWith('switch.'));
+    } else {
+      // Fall back to auto-discovery
+      // Find heating circuit related entities
+      hcNumbers = this._findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'number');
+      hcSwitches = this._findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'switch');
+    }
     
     return html`
       <div class="section">
@@ -651,10 +682,22 @@ class ThzCard extends LitElement {
   }
 
   _renderHotWaterSection() {
-    // Find hot water related entities
-    const dhwSwitches = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'switch');
-    const dhwNumbers = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'number');
-    const dhwSensors = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'sensor');
+    // Check if we have selected entities for hot water
+    const selectedEntities = this._getEntitiesForSection('hot_water');
+    
+    let dhwSwitches, dhwNumbers, dhwSensors;
+    if (selectedEntities) {
+      // Use selected entities, separating by domain
+      dhwSwitches = selectedEntities.filter(id => id.startsWith('switch.'));
+      dhwNumbers = selectedEntities.filter(id => id.startsWith('number.'));
+      dhwSensors = selectedEntities.filter(id => id.startsWith('sensor.'));
+    } else {
+      // Fall back to auto-discovery
+      // Find hot water related entities
+      dhwSwitches = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'switch');
+      dhwNumbers = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'number');
+      dhwSensors = this._findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'sensor');
+    }
     
     return html`
       <div class="section">
@@ -730,11 +773,24 @@ class ThzCard extends LitElement {
   }
 
   _renderCoolingSection() {
-    // Find cooling related entities (switches, numbers, sensors)
-    const coolingSwitches = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'switch');
-    const coolingNumbers = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'number');
-    const coolingSensors = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'sensor');
-    const coolingSelects = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'select');
+    // Check if we have selected entities for cooling
+    const selectedEntities = this._getEntitiesForSection('cooling');
+    
+    let coolingSwitches, coolingNumbers, coolingSensors, coolingSelects;
+    if (selectedEntities) {
+      // Use selected entities, separating by domain
+      coolingSwitches = selectedEntities.filter(id => id.startsWith('switch.'));
+      coolingNumbers = selectedEntities.filter(id => id.startsWith('number.'));
+      coolingSensors = selectedEntities.filter(id => id.startsWith('sensor.'));
+      coolingSelects = selectedEntities.filter(id => id.startsWith('select.'));
+    } else {
+      // Fall back to auto-discovery
+      // Find cooling related entities (switches, numbers, sensors)
+      coolingSwitches = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'switch');
+      coolingNumbers = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'number');
+      coolingSensors = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'sensor');
+      coolingSelects = this._findEntitiesByPattern(/cooling|k[üu]hl/i, 'select');
+    }
     
     // If no cooling entities found, don't show the section
     if (coolingSwitches.length === 0 && coolingNumbers.length === 0 && 
@@ -839,12 +895,22 @@ class ThzCard extends LitElement {
   }
 
   _renderAdditionalControls() {
-    // Find any remaining important switches (excluding cooling which has its own section)
-    const allOtherSwitches = this._findEntitiesByPattern(/emergency|party|holiday|vacation|urlaub/i, 'switch');
-    // Filter out cooling switches as they now have their own section
-    const otherSwitches = allOtherSwitches.filter(entityId => 
-      !/cooling|k[üu]hl/i.test(entityId)
-    );
+    // Check if we have selected entities for additional controls
+    const selectedEntities = this._getEntitiesForSection('additional');
+    
+    let otherSwitches;
+    if (selectedEntities) {
+      // Use selected entities
+      otherSwitches = selectedEntities;
+    } else {
+      // Fall back to auto-discovery
+      // Find any remaining important switches (excluding cooling which has its own section)
+      const allOtherSwitches = this._findEntitiesByPattern(/emergency|party|holiday|vacation|urlaub/i, 'switch');
+      // Filter out cooling switches as they now have their own section
+      otherSwitches = allOtherSwitches.filter(entityId => 
+        !/cooling|k[üu]hl/i.test(entityId)
+      );
+    }
     
     if (otherSwitches.length === 0) return '';
     
@@ -999,6 +1065,21 @@ class ThzCard extends LitElement {
                pattern.test(friendlyName);
       })
       .map(([entityId]) => entityId);
+  }
+
+  _getEntitiesForSection(section) {
+    // If selected_entities config exists and has entities for this section, use those
+    if (this.config.selected_entities && 
+        this.config.selected_entities[section] && 
+        this.config.selected_entities[section].length > 0) {
+      // Filter to ensure entities still exist in Home Assistant
+      return this.config.selected_entities[section].filter(entityId => 
+        this.hass.states[entityId] !== undefined
+      );
+    }
+    
+    // Otherwise, fall back to auto-discovery
+    return null;
   }
 
   _getEntityName(entity) {
