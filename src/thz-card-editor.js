@@ -22,14 +22,7 @@ class ThzCardEditor extends LitElement {
     this.config = config;
     // Initialize selected_entities if not present
     if (!this.config.selected_entities) {
-      this.config.selected_entities = {
-        temperature: [],
-        mode: [],
-        heating_circuit: [],
-        hot_water: [],
-        cooling: [],
-        additional: [],
-      };
+      this.config.selected_entities = this._getEmptySelectedEntities();
     }
     // Discover entities when config is set
     this._discoverEntities();
@@ -261,10 +254,10 @@ class ThzCardEditor extends LitElement {
         ${isExpanded ? html`
           <div class="entity-section-content">
             <div class="section-actions">
-              <button class="action-button" @click=${(e) => { e.stopPropagation(); this._selectAllInSection(section); }}>
+              <button class="action-button" @click=${(e) => this._handleSectionAction(e, () => this._selectAllInSection(section))}>
                 Select All
               </button>
-              <button class="action-button" @click=${(e) => { e.stopPropagation(); this._deselectAllInSection(section); }}>
+              <button class="action-button" @click=${(e) => this._handleSectionAction(e, () => this._deselectAllInSection(section))}>
                 Deselect All
               </button>
             </div>
@@ -485,23 +478,23 @@ class ThzCardEditor extends LitElement {
       return true;
     });
 
-    // Mode entities
+    // Mode entities (consistent order: selects first, then sensors)
     const modeSelects = findEntitiesByPattern(/mode|betriebsart|operation|operating/i, 'select');
     const modeSensors = findEntitiesByPattern(/mode|betriebsart|operation|operating|state|status/i, 'sensor');
     discovered.mode = [...modeSelects, ...modeSensors];
 
-    // Heating circuit entities
-    const hcNumbers = findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'number');
+    // Heating circuit entities (consistent order: switches, then numbers)
     const hcSwitches = findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'switch');
+    const hcNumbers = findEntitiesByPattern(/hc1|heating.*circuit.*1|heizkreis.*1/i, 'number');
     discovered.heating_circuit = [...hcSwitches, ...hcNumbers];
 
-    // Hot water entities
+    // Hot water entities (consistent order: switches, numbers, then sensors)
     const dhwSwitches = findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'switch');
     const dhwNumbers = findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'number');
     const dhwSensors = findEntitiesByPattern(/dhw|hot.*water|warmwasser/i, 'sensor');
     discovered.hot_water = [...dhwSwitches, ...dhwNumbers, ...dhwSensors];
 
-    // Cooling entities
+    // Cooling entities (consistent order: switches, numbers, sensors, then selects)
     const coolingSwitches = findEntitiesByPattern(/cooling|k[üu]hl/i, 'switch');
     const coolingNumbers = findEntitiesByPattern(/cooling|k[üu]hl/i, 'number');
     const coolingSensors = findEntitiesByPattern(/cooling|k[üu]hl/i, 'sensor');
@@ -515,6 +508,17 @@ class ThzCardEditor extends LitElement {
     );
 
     this._discoveredEntities = discovered;
+  }
+
+  _getEmptySelectedEntities() {
+    return {
+      temperature: [],
+      mode: [],
+      heating_circuit: [],
+      hot_water: [],
+      cooling: [],
+      additional: [],
+    };
   }
 
   _getEntityDomain(entityId) {
@@ -553,14 +557,7 @@ class ThzCardEditor extends LitElement {
   _toggleEntity(section, entityId) {
     const newConfig = { ...this.config };
     if (!newConfig.selected_entities) {
-      newConfig.selected_entities = {
-        temperature: [],
-        mode: [],
-        heating_circuit: [],
-        hot_water: [],
-        cooling: [],
-        additional: [],
-      };
+      newConfig.selected_entities = this._getEmptySelectedEntities();
     }
     
     const selected = newConfig.selected_entities[section] || [];
@@ -580,14 +577,7 @@ class ThzCardEditor extends LitElement {
   _selectAllInSection(section) {
     const newConfig = { ...this.config };
     if (!newConfig.selected_entities) {
-      newConfig.selected_entities = {
-        temperature: [],
-        mode: [],
-        heating_circuit: [],
-        hot_water: [],
-        cooling: [],
-        additional: [],
-      };
+      newConfig.selected_entities = this._getEmptySelectedEntities();
     }
     
     newConfig.selected_entities[section] = [...(this._discoveredEntities[section] || [])];
@@ -597,18 +587,16 @@ class ThzCardEditor extends LitElement {
   _deselectAllInSection(section) {
     const newConfig = { ...this.config };
     if (!newConfig.selected_entities) {
-      newConfig.selected_entities = {
-        temperature: [],
-        mode: [],
-        heating_circuit: [],
-        hot_water: [],
-        cooling: [],
-        additional: [],
-      };
+      newConfig.selected_entities = this._getEmptySelectedEntities();
     }
     
     newConfig.selected_entities[section] = [];
     this._updateConfig(newConfig);
+  }
+
+  _handleSectionAction(e, callback) {
+    e.stopPropagation();
+    callback();
   }
 
   _toggleSection(section) {
