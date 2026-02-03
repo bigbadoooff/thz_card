@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'lit';
+import { createThing } from 'custom-card-helpers';
 import './thz-card-editor.js';
 
 const CARD_VERSION = '1.2.0';
@@ -23,6 +24,11 @@ class ThzCard extends LitElement {
       hass: { type: Object },
       config: { type: Object },
     };
+  }
+
+  constructor() {
+    super();
+    this._graphCards = {};
   }
 
   static getConfigElement() {
@@ -324,14 +330,19 @@ class ThzCard extends LitElement {
       return '';
     }
     
-    return this._renderHistoryGraph(sensorsToGraph, `Temperature History (${this.config.graph_hours || 24}h)`);
+    return this._renderHistoryGraph(sensorsToGraph, `Temperature History (${this.config.graph_hours || 24}h)`, 'temperature');
   }
 
   /**
    * Creates an embedded HA history-graph card for displaying sensor history
-   * Uses Home Assistant's internal graph rendering for reliable graph display
+   * Uses Home Assistant's card helpers for reliable graph display
    */
-  _renderHistoryGraph(entityIds, title) {
+  _renderHistoryGraph(entityIds, title, graphKey) {
+    // Validate entityIds is non-empty
+    if (!entityIds || entityIds.length === 0) {
+      return '';
+    }
+    
     const hours = this.config.graph_hours || 24;
     
     // Create entities config for history-graph
@@ -341,18 +352,30 @@ class ThzCard extends LitElement {
       return { entity: entityId, name: name };
     });
     
+    // Create the history-graph card using HA's card helpers
+    const cardConfig = {
+      type: 'history-graph',
+      entities: entities,
+      hours_to_show: hours,
+      refresh_interval: 0
+    };
+    
+    // Cache key for the card to avoid recreation on every render
+    const cacheKey = graphKey || entityIds.join(',');
+    
+    // Create or get cached card element
+    if (!this._graphCards[cacheKey]) {
+      this._graphCards[cacheKey] = createThing(cardConfig);
+    }
+    
+    const card = this._graphCards[cacheKey];
+    card.hass = this.hass;
+    card.setConfig(cardConfig);
+    
     return html`
       <div class="history-graph-container">
         <div class="graph-title">${title}</div>
-        <hui-history-graph-card
-          .hass=${this.hass}
-          .config=${{
-            type: 'history-graph',
-            entities: entities,
-            hours_to_show: hours,
-            refresh_interval: 0
-          }}
-        ></hui-history-graph-card>
+        <div class="graph-card-wrapper">${card}</div>
       </div>
     `;
   }
@@ -398,7 +421,7 @@ class ThzCard extends LitElement {
       return '';
     }
     
-    return this._renderHistoryGraph(sensorsToGraph, `Fan History (${this.config.graph_hours || 24}h)`);
+    return this._renderHistoryGraph(sensorsToGraph, `Fan History (${this.config.graph_hours || 24}h)`, 'fan');
   }
 
   _renderHeatingDetailsSection() {
@@ -501,7 +524,7 @@ class ThzCard extends LitElement {
       return '';
     }
     
-    return this._renderHistoryGraph(sensorsToGraph, `Heating Details History (${this.config.graph_hours || 24}h)`);
+    return this._renderHistoryGraph(sensorsToGraph, `Heating Details History (${this.config.graph_hours || 24}h)`, 'heating-details');
   }
 
   _renderModeSection() {
