@@ -149,7 +149,10 @@ class ThzCard extends LitElement {
     
     return html`
       <div class="section">
-        <div class="section-title">Temperatures</div>
+        <div class="section-title">
+          <span class="section-title-icon">🌡️</span>
+          <span>Temperatures</span>
+        </div>
         ${this.config.show_temperature_graph && graphSensors.length > 0 ? this._renderTemperatureGraph(graphSensors) : ''}
         <div class="sensor-grid">
           ${tempSensors.slice(0, 6).map(entityId => {
@@ -398,7 +401,10 @@ class ThzCard extends LitElement {
     // Always show the Fan Values section
     return html`
       <div class="section">
-        <div class="section-title">Fan Values</div>
+        <div class="section-title">
+          <span class="section-title-icon">💨</span>
+          <span>Fan Values</span>
+        </div>
         ${this.config.show_fan_graph && fanSensors.length > 0 ? this._renderFanGraph(fanSensors) : ''}
         ${fanSensors.length > 0 ? html`
           <div class="sensor-grid">
@@ -453,7 +459,10 @@ class ThzCard extends LitElement {
     // Always show the Heating Details section
     return html`
       <div class="section">
-        <div class="section-title">Heating Details</div>
+        <div class="section-title">
+          <span class="section-title-icon">🔥</span>
+          <span>Heating Details</span>
+        </div>
         ${this.config.show_heating_details_graph && filteredSensors.length > 0 ? this._renderHeatingDetailsGraph(filteredSensors) : ''}
         ${filteredSensors.length > 0 ? html`
           <div class="sensor-grid">
@@ -495,7 +504,10 @@ class ThzCard extends LitElement {
 
     return html`
       <div class="section">
-        <div class="section-title">⚡ Energy & Efficiency</div>
+        <div class="section-title">
+          <span class="section-title-icon">⚡</span>
+          <span>Energy & Efficiency</span>
+        </div>
         <div class="sensor-grid">
           ${allEnergySensors.slice(0, 6).map(entityId => {
             const entity = this.hass.states[entityId];
@@ -558,7 +570,10 @@ class ThzCard extends LitElement {
     // Always show the Operation Mode section
     return html`
       <div class="section">
-        <div class="section-title">Operation Mode</div>
+        <div class="section-title">
+          <span class="section-title-icon">⚙️</span>
+          <span>Operation Mode</span>
+        </div>
         ${modeSelects.length > 0 ? html`
           <div class="control-grid">
             ${modeSelects.slice(0, 3).map(entityId => {
@@ -630,7 +645,10 @@ class ThzCard extends LitElement {
     
     return html`
       <div class="section">
-        <div class="section-title">Heating Circuit 1</div>
+        <div class="section-title">
+          <span class="section-title-icon">🔥</span>
+          <span>Heating Circuit 1</span>
+        </div>
         <div class="control-grid">
           ${hcSwitches.slice(0, 2).map(entityId => {
             const entity = this.hass.states[entityId];
@@ -702,7 +720,10 @@ class ThzCard extends LitElement {
     
     return html`
       <div class="section">
-        <div class="section-title">Hot Water</div>
+        <div class="section-title">
+          <span class="section-title-icon">💧</span>
+          <span>Hot Water</span>
+        </div>
         <div class="control-grid">
           ${dhwSwitches.slice(0, 2).map(entityId => {
             const entity = this.hass.states[entityId];
@@ -801,7 +822,10 @@ class ThzCard extends LitElement {
     
     return html`
       <div class="section cooling-section">
-        <div class="section-title">❄️ Cooling</div>
+        <div class="section-title">
+          <span class="section-title-icon">❄️</span>
+          <span>Cooling</span>
+        </div>
         <div class="control-grid">
           ${coolingSwitches.slice(0, 2).map(entityId => {
             const entity = this.hass.states[entityId];
@@ -970,7 +994,13 @@ class ThzCard extends LitElement {
     return html`
       <div class="section error-section ${hasErrors ? 'has-errors' : ''}">
         <div class="section-title">
-          ${hasErrors ? '⚠️ Alerts & Errors' : '✓ System Status'}
+          ${hasErrors ? html`
+            <span class="section-title-icon">⚠️</span>
+            <span>Alerts & Errors</span>
+          ` : html`
+            <span class="section-title-icon">✓</span>
+            <span>System Status</span>
+          `}
         </div>
         ${!hasErrors ? html`
           <div class="no-errors">
@@ -1150,7 +1180,12 @@ class ThzCard extends LitElement {
         background: var(--secondary-background-color);
         border-radius: 8px;
         border: 2px solid transparent;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease-in-out;
+      }
+
+      .stat-item:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
       }
 
       .stat-icon {
@@ -1208,23 +1243,38 @@ class ThzCard extends LitElement {
       .card-content {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 24px;
       }
 
       .section {
         border: 1px solid var(--divider-color);
-        border-radius: 8px;
+        border-radius: 12px;
         padding: 12px;
         background: var(--card-background-color);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+      }
+
+      .section:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
       }
 
       .section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         font-size: 16px;
         font-weight: 500;
         color: var(--primary-text-color);
         margin-bottom: 12px;
         padding-bottom: 8px;
         border-bottom: 1px solid var(--divider-color);
+      }
+
+      .section-title-icon {
+        font-size: 18px;
+        line-height: 1;
       }
 
       .sensor-grid,
@@ -1240,6 +1290,13 @@ class ThzCard extends LitElement {
         padding: 8px;
         background: var(--secondary-background-color);
         border-radius: 4px;
+        transition: all 0.2s ease-in-out;
+      }
+
+      .sensor-item:hover {
+        background: var(--card-background-color);
+        transform: translateX(4px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
 
       .sensor-name {
@@ -1266,42 +1323,70 @@ class ThzCard extends LitElement {
       }
 
       select {
-        padding: 8px;
-        border: 1px solid var(--divider-color);
-        border-radius: 4px;
-        background: var(--secondary-background-color);
+        padding: 8px 32px 8px 8px;
+        border: 2px solid var(--divider-color);
+        border-radius: 8px;
+        background: var(--card-background-color);
         color: var(--primary-text-color);
         font-size: 14px;
         cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+      }
+
+      select:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       select:focus {
         outline: none;
         border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
       }
 
       .switch-button {
+        min-width: 60px;
         padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        font-size: 14px;
-        font-weight: 500;
+        border: 2px solid transparent;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease-in-out;
       }
 
       .switch-button.on {
         background: var(--primary-color);
         color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .switch-button.on:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
       }
 
       .switch-button.off {
-        background: var(--disabled-text-color);
-        color: white;
+        background: var(--secondary-background-color);
+        color: var(--secondary-text-color);
+        border-color: var(--divider-color);
       }
 
-      .switch-button:hover {
-        opacity: 0.8;
+      .switch-button.off:hover {
+        background: var(--divider-color);
+        border-color: var(--primary-text-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .switch-button:active {
+        transform: translateY(0);
       }
 
       .number-control {
@@ -1313,16 +1398,23 @@ class ThzCard extends LitElement {
       .number-control input {
         flex: 1;
         padding: 8px;
-        border: 1px solid var(--divider-color);
-        border-radius: 4px;
-        background: var(--secondary-background-color);
+        border: 2px solid var(--divider-color);
+        border-radius: 8px;
+        background: var(--card-background-color);
         color: var(--primary-text-color);
         font-size: 14px;
+        transition: all 0.2s ease-in-out;
+      }
+
+      .number-control input:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .number-control input:focus {
         outline: none;
         border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
       }
 
       .unit {
