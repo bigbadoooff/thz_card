@@ -1345,7 +1345,7 @@ class ThzCard extends LitElement {
       select:focus {
         outline: none;
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(3, 169, 244, 0.1);
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
       }
 
       .switch-button {
@@ -1362,14 +1362,14 @@ class ThzCard extends LitElement {
       }
 
       .switch-button.on {
-        background: linear-gradient(135deg, var(--primary-color) 0%, #0288d1 100%);
+        background: var(--primary-color);
         color: white;
-        box-shadow: 0 2px 8px rgba(3, 169, 244, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       }
 
       .switch-button.on:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(3, 169, 244, 0.4);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
       }
 
       .switch-button.off {
@@ -1414,7 +1414,7 @@ class ThzCard extends LitElement {
       .number-control input:focus {
         outline: none;
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(3, 169, 244, 0.1);
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
       }
 
       .unit {
