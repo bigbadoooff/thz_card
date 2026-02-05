@@ -683,13 +683,29 @@ class ThzCard extends LitElement {
               <div class="control-item">
                 <div class="control-name">${name}</div>
                 <div class="number-control">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._decrementNumber(entityId, step, min)}
+                    ?disabled=${parseFloat(value) <= min}
+                    aria-label="Decrease ${name}">
+                    −
+                  </button>
                   <input 
                     type="number" 
                     .value=${value}
                     min=${min}
                     max=${max}
                     step=${step}
-                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}>
+                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}
+                    @input=${(e) => this._validateNumberInput(e, min, max)}
+                    aria-label="${name}">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._incrementNumber(entityId, step, max)}
+                    ?disabled=${parseFloat(value) >= max}
+                    aria-label="Increase ${name}">
+                    +
+                  </button>
                   <span class="unit">${unit}</span>
                 </div>
               </div>
@@ -758,13 +774,29 @@ class ThzCard extends LitElement {
               <div class="control-item">
                 <div class="control-name">${name}</div>
                 <div class="number-control">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._decrementNumber(entityId, step, min)}
+                    ?disabled=${parseFloat(value) <= min}
+                    aria-label="Decrease ${name}">
+                    −
+                  </button>
                   <input 
                     type="number" 
                     .value=${value}
                     min=${min}
                     max=${max}
                     step=${step}
-                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}>
+                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}
+                    @input=${(e) => this._validateNumberInput(e, min, max)}
+                    aria-label="${name}">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._incrementNumber(entityId, step, max)}
+                    ?disabled=${parseFloat(value) >= max}
+                    aria-label="Increase ${name}">
+                    +
+                  </button>
                   <span class="unit">${unit}</span>
                 </div>
               </div>
@@ -883,13 +915,29 @@ class ThzCard extends LitElement {
               <div class="control-item">
                 <div class="control-name">${name}</div>
                 <div class="number-control">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._decrementNumber(entityId, step, min)}
+                    ?disabled=${parseFloat(value) <= min}
+                    aria-label="Decrease ${name}">
+                    −
+                  </button>
                   <input 
                     type="number" 
                     .value=${value}
                     min=${min}
                     max=${max}
                     step=${step}
-                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}>
+                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}
+                    @input=${(e) => this._validateNumberInput(e, min, max)}
+                    aria-label="${name}">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._incrementNumber(entityId, step, max)}
+                    ?disabled=${parseFloat(value) >= max}
+                    aria-label="Increase ${name}">
+                    +
+                  </button>
                   <span class="unit">${unit}</span>
                 </div>
               </div>
@@ -1086,6 +1134,50 @@ class ThzCard extends LitElement {
     });
   }
 
+  _incrementNumber(entityId, step, max) {
+    const entity = this.hass.states[entityId];
+    if (!entity) return;
+    
+    const currentValue = parseFloat(entity.state);
+    const stepValue = parseFloat(step);
+    const maxValue = parseFloat(max);
+    
+    if (isNaN(currentValue) || isNaN(stepValue) || isNaN(maxValue)) return;
+    
+    const newValue = Math.min(currentValue + stepValue, maxValue);
+    this._handleNumberChange(entityId, newValue);
+  }
+
+  _decrementNumber(entityId, step, min) {
+    const entity = this.hass.states[entityId];
+    if (!entity) return;
+    
+    const currentValue = parseFloat(entity.state);
+    const stepValue = parseFloat(step);
+    const minValue = parseFloat(min);
+    
+    if (isNaN(currentValue) || isNaN(stepValue) || isNaN(minValue)) return;
+    
+    const newValue = Math.max(currentValue - stepValue, minValue);
+    this._handleNumberChange(entityId, newValue);
+  }
+
+  _validateNumberInput(event, min, max) {
+    const input = event.target;
+    const value = parseFloat(input.value);
+    const minValue = parseFloat(min);
+    const maxValue = parseFloat(max);
+    
+    if (isNaN(value) || isNaN(minValue) || isNaN(maxValue)) return;
+    
+    // Clamp value between min and max
+    if (value < minValue) {
+      input.value = minValue;
+    } else if (value > maxValue) {
+      input.value = maxValue;
+    }
+  }
+
   static get styles() {
     return css`
       :host {
@@ -1163,59 +1255,85 @@ class ThzCard extends LitElement {
 
       /* Statistics Section Styles */
       .statistics-section {
-        margin-bottom: 20px;
+        margin-bottom: 24px;
+        padding: 4px;
       }
 
       .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 12px;
+        gap: 16px;
       }
 
       .stat-item {
+        background: linear-gradient(135deg, var(--card-background-color) 0%, var(--secondary-background-color) 100%);
+        border: 1px solid var(--divider-color);
+        border-radius: 12px;
+        padding: 18px 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        position: relative;
+        overflow: hidden;
         display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px;
-        background: var(--secondary-background-color);
-        border-radius: 8px;
-        border: 2px solid transparent;
-        transition: all 0.2s ease-in-out;
+        flex-direction: column;
+        gap: 8px;
       }
 
-      .stat-item:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      .stat-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary-color), var(--accent-color, var(--primary-color)));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .stat-item:hover::before {
+        opacity: 1;
       }
 
       .stat-icon {
-        font-size: 24px;
+        font-size: 28px;
         line-height: 1;
+        display: block;
+        margin-bottom: 4px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
       }
 
       .stat-content {
-        flex: 1;
-        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
       }
 
       .stat-name {
         font-size: 12px;
         color: var(--secondary-text-color);
-        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
       }
 
       .stat-value {
-        font-size: 18px;
-        font-weight: 600;
+        font-size: 28px;
+        font-weight: 700;
         color: var(--primary-text-color);
+        line-height: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
+      /* COP specific styling enhancements */
       .cop-excellent {
         border-color: #4caf50;
-        background: rgba(76, 175, 80, 0.1);
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(76, 175, 80, 0.15) 100%);
+      }
+
+      .cop-excellent::before {
+        background: #4caf50;
       }
 
       .cop-excellent .stat-value {
@@ -1224,7 +1342,11 @@ class ThzCard extends LitElement {
 
       .cop-good {
         border-color: #8bc34a;
-        background: rgba(139, 195, 74, 0.1);
+        background: linear-gradient(135deg, rgba(139, 195, 74, 0.05) 0%, rgba(139, 195, 74, 0.15) 100%);
+      }
+
+      .cop-good::before {
+        background: #8bc34a;
       }
 
       .cop-good .stat-value {
@@ -1233,43 +1355,57 @@ class ThzCard extends LitElement {
 
       .cop-poor {
         border-color: #ff9800;
-        background: rgba(255, 152, 0, 0.1);
+        background: linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 152, 0, 0.15) 100%);
+      }
+
+      .cop-poor::before {
+        background: #ff9800;
       }
 
       .cop-poor .stat-value {
         color: #ff9800;
       }
 
+      /* Mobile optimization for stats */
+      @media (max-width: 600px) {
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
       .card-content {
         display: flex;
         flex-direction: column;
         gap: 24px;
+        padding: 4px;
       }
 
       .section {
         border: 1px solid var(--divider-color);
         border-radius: 12px;
-        padding: 12px;
+        padding: 18px;
         background: var(--card-background-color);
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         transition: all 0.3s ease;
+        position: relative;
       }
 
       .section:hover {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         transform: translateY(-2px);
+        border-color: rgba(var(--primary-color-rgb, 3, 169, 244), 0.3);
       }
 
       .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--primary-text-color);
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--divider-color);
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 16px;
-        font-weight: 500;
-        color: var(--primary-text-color);
-        margin-bottom: 12px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid var(--divider-color);
       }
 
       .section-title-icon {
@@ -1281,16 +1417,22 @@ class ThzCard extends LitElement {
       .control-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 12px;
+        gap: 14px;
+      }
+
+      .sensor-item,
+      .control-item {
+        background: var(--secondary-background-color);
+        border: 1px solid var(--divider-color);
+        border-radius: 10px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
 
       .sensor-item {
-        display: flex;
-        flex-direction: column;
-        padding: 8px;
-        background: var(--secondary-background-color);
-        border-radius: 4px;
-        transition: all 0.2s ease-in-out;
+        cursor: default;
       }
 
       .sensor-item:hover {
@@ -1299,27 +1441,31 @@ class ThzCard extends LitElement {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
 
-      .sensor-name {
-        font-size: 12px;
+      .sensor-name,
+      .control-name {
+        font-size: 13px;
         color: var(--secondary-text-color);
-        margin-bottom: 4px;
+        font-weight: 500;
+        line-height: 1.3;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
 
       .sensor-value {
-        font-size: 18px;
-        font-weight: 500;
+        font-size: 20px;
+        font-weight: 600;
         color: var(--primary-text-color);
+        line-height: 1.2;
       }
 
-      .control-item {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .control-name {
-        font-size: 14px;
-        color: var(--primary-text-color);
+      /* Mobile optimization */
+      @media (max-width: 600px) {
+        .sensor-grid,
+        .control-grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
       }
 
       select {
@@ -1392,34 +1538,87 @@ class ThzCard extends LitElement {
       .number-control {
         display: flex;
         align-items: center;
-        gap: 8px;
+        background: var(--card-background-color);
+        border: 2px solid var(--divider-color);
+        border-radius: 28px;
+        padding: 4px;
+        gap: 6px;
+        transition: all 0.2s ease;
+        max-width: 200px;
+      }
+
+      .number-control:focus-within {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 3, 169, 244), 0.15);
+      }
+
+      .number-control-button {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        border-radius: 50%;
+        border: none;
+        background: var(--primary-color);
+        color: white;
+        cursor: pointer;
+        font-size: 20px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        line-height: 1;
+        padding: 0;
+      }
+
+      .number-control-button:not(:disabled):hover {
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(var(--primary-color-rgb, 3, 169, 244), 0.4);
+      }
+
+      .number-control-button:not(:disabled):active {
+        transform: scale(0.95);
+      }
+
+      .number-control-button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none;
       }
 
       .number-control input {
+        border: none;
+        background: transparent;
+        text-align: center;
         flex: 1;
-        padding: 8px;
-        border: 2px solid var(--divider-color);
-        border-radius: 8px;
-        background: var(--card-background-color);
+        min-width: 50px;
+        font-size: 16px;
+        font-weight: 600;
         color: var(--primary-text-color);
-        font-size: 14px;
-        transition: all 0.2s ease-in-out;
-      }
-
-      .number-control input:hover {
-        border-color: var(--primary-color);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 0;
       }
 
       .number-control input:focus {
         outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
       }
 
-      .unit {
-        font-size: 12px;
+      /* Remove number input spinners */
+      .number-control input::-webkit-outer-spin-button,
+      .number-control input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .number-control input[type=number] {
+        -moz-appearance: textfield;
+      }
+
+      .number-control .unit {
+        font-size: 13px;
         color: var(--secondary-text-color);
+        padding-right: 8px;
+        font-weight: 500;
+        white-space: nowrap;
       }
 
       /* Temperature Graph Styles */
