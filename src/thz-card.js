@@ -1377,8 +1377,8 @@ class ThzCard extends LitElement {
       .card-content {
         display: flex;
         flex-direction: column;
-        gap: 24px; /* Increased from 20px */
-        padding: 4px; /* Add slight padding to prevent shadow clipping */
+        gap: 24px;
+        padding: 4px;
       }
 
       .section {
@@ -1452,7 +1452,7 @@ class ThzCard extends LitElement {
       .control-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 14px; /* Increased from 12px */
+        gap: 14px;
       }
 
       .sensor-item,
