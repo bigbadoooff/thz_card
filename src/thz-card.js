@@ -1139,10 +1139,10 @@ class ThzCard extends LitElement {
     if (!entity) return;
     
     const currentValue = parseFloat(entity.state);
-    const stepValue = parseFloat(step) || 1;
-    const maxValue = parseFloat(max) || 100;
+    const stepValue = parseFloat(step);
+    const maxValue = parseFloat(max);
     
-    if (isNaN(currentValue)) return;
+    if (isNaN(currentValue) || isNaN(stepValue) || isNaN(maxValue)) return;
     
     const newValue = Math.min(currentValue + stepValue, maxValue);
     this._handleNumberChange(entityId, newValue);
@@ -1153,10 +1153,10 @@ class ThzCard extends LitElement {
     if (!entity) return;
     
     const currentValue = parseFloat(entity.state);
-    const stepValue = parseFloat(step) || 1;
-    const minValue = parseFloat(min) || 0;
+    const stepValue = parseFloat(step);
+    const minValue = parseFloat(min);
     
-    if (isNaN(currentValue)) return;
+    if (isNaN(currentValue) || isNaN(stepValue) || isNaN(minValue)) return;
     
     const newValue = Math.max(currentValue - stepValue, minValue);
     this._handleNumberChange(entityId, newValue);
@@ -1165,11 +1165,10 @@ class ThzCard extends LitElement {
   _validateNumberInput(event, min, max) {
     const input = event.target;
     const value = parseFloat(input.value);
+    const minValue = parseFloat(min);
+    const maxValue = parseFloat(max);
     
-    if (isNaN(value)) return;
-    
-    const minValue = parseFloat(min) || 0;
-    const maxValue = parseFloat(max) || 100;
+    if (isNaN(value) || isNaN(minValue) || isNaN(maxValue)) return;
     
     // Clamp value between min and max
     if (value < minValue) {
