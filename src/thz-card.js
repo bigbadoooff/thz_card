@@ -164,9 +164,11 @@ class ThzCard extends LitElement {
             const unit = entity.attributes.unit_of_measurement || '';
             
             return html`
-              <div class="sensor-item">
+              <div class="sensor-item ${this._getEntityStateClass(entity)}">
                 <div class="sensor-name">${name}</div>
-                <div class="sensor-value">${value}${unit}</div>
+                <div class="sensor-value ${this._isEntityLoading(entity) ? 'loading' : ''}">
+                  ${this._isEntityLoading(entity) ? '---' : `${value}${unit}`}
+                </div>
               </div>
             `;
           })}
@@ -265,6 +267,7 @@ class ThzCard extends LitElement {
           icon: '⏱️',
           value: entity.state,
           unit: entity.attributes.unit_of_measurement || '',
+          entity: entity,
         });
       }
     }
@@ -278,6 +281,7 @@ class ThzCard extends LitElement {
           icon: '⚡',
           value: entity.state,
           unit: entity.attributes.unit_of_measurement || '',
+          entity: entity,
         });
       }
     }
@@ -299,6 +303,7 @@ class ThzCard extends LitElement {
           value: entity.state,
           unit: entity.attributes.unit_of_measurement || '',
           className: copClass,
+          entity: entity,
         });
       }
     }
@@ -312,6 +317,7 @@ class ThzCard extends LitElement {
           icon: '🔧',
           value: entity.state,
           unit: entity.attributes.unit_of_measurement || '',
+          entity: entity,
         });
       }
     }
@@ -326,7 +332,9 @@ class ThzCard extends LitElement {
               <div class="stat-icon">${stat.icon}</div>
               <div class="stat-content">
                 <div class="stat-name">${stat.name}</div>
-                <div class="stat-value">${stat.value}${stat.unit}</div>
+                <div class="stat-value ${this._isEntityLoading(stat.entity) ? 'loading' : ''}">
+                  ${this._isEntityLoading(stat.entity) ? '---' : `${stat.value}${stat.unit}`}
+                </div>
               </div>
             </div>
           `)}
@@ -528,10 +536,15 @@ class ThzCard extends LitElement {
               }
             }
             
+            // Add loading state class
+            className += ' ' + this._getEntityStateClass(entity);
+            
             return html`
               <div class="${className}">
                 <div class="sensor-name">${name}</div>
-                <div class="sensor-value">${value}${unit}</div>
+                <div class="sensor-value ${this._isEntityLoading(entity) ? 'loading' : ''}">
+                  ${this._isEntityLoading(entity) ? '---' : `${value}${unit}`}
+                </div>
               </div>
             `;
           })}
@@ -1038,17 +1051,23 @@ class ThzCard extends LitElement {
     }
 
     const hasErrors = activeErrors.length > 0;
+    const errorCount = activeErrors.length;
 
     return html`
       <div class="section error-section ${hasErrors ? 'has-errors' : ''}">
-        <div class="section-title">
+        <div class="error-section-header">
+          <div class="section-title">
+            ${hasErrors ? html`
+              <span class="section-title-icon">⚠️</span>
+              <span>Alerts & Errors</span>
+            ` : html`
+              <span class="section-title-icon">✓</span>
+              <span>System Status</span>
+            `}
+          </div>
           ${hasErrors ? html`
-            <span class="section-title-icon">⚠️</span>
-            <span>Alerts & Errors</span>
-          ` : html`
-            <span class="section-title-icon">✓</span>
-            <span>System Status</span>
-          `}
+            <span class="error-count-badge">${errorCount}</span>
+          ` : ''}
         </div>
         ${!hasErrors ? html`
           <div class="no-errors">
@@ -1057,7 +1076,7 @@ class ThzCard extends LitElement {
           </div>
         ` : html`
           <div class="error-list">
-            ${activeErrors.map(entityId => {
+            ${activeErrors.map((entityId, index) => {
               const entity = this.hass.states[entityId];
               if (!entity) return '';
               
@@ -1065,7 +1084,7 @@ class ThzCard extends LitElement {
               const value = entity.state;
               
               return html`
-                <div class="error-item">
+                <div class="error-item" style="animation-delay: ${index * 0.1}s">
                   <div class="error-icon">⚠️</div>
                   <div class="error-content">
                     <div class="error-name">${name}</div>
@@ -1085,6 +1104,20 @@ class ThzCard extends LitElement {
     // Check for explicit error/alarm states
     const errorStates = ['on', 'true', 'active', 'problem', 'alarm', 'error', 'fault'];
     return errorStates.includes(lowerState);
+  }
+
+  // Helper method to check if entity is loading/unavailable
+  _isEntityLoading(entity) {
+    if (!entity) return true;
+    const state = entity.state;
+    return state === 'unavailable' || state === 'unknown' || state === null || state === undefined;
+  }
+
+  _getEntityStateClass(entity) {
+    if (!entity) return 'loading';
+    const state = entity.state;
+    if (state === 'unavailable' || state === 'unknown') return 'unavailable';
+    return '';
   }
 
   _findEntitiesByPattern(pattern, domain = null) {
@@ -1722,6 +1755,379 @@ class ThzCard extends LitElement {
       .cooling-section {
         border-color: #2196f3;
         background: rgba(33, 150, 243, 0.03);
+      }
+
+      /* Loading State Animation */
+      .loading {
+        background: linear-gradient(90deg, 
+          var(--divider-color) 25%, 
+          var(--secondary-background-color) 50%, 
+          var(--divider-color) 75%
+        );
+        background-size: 200% 100%;
+        animation: loading 1.5s ease-in-out infinite;
+        border-radius: 4px;
+        color: transparent !important;
+        min-width: 60px;
+        display: inline-block;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .loading::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, 
+          transparent, 
+          rgba(255, 255, 255, 0.3), 
+          transparent
+        );
+        animation: shimmer 1.5s ease-in-out infinite;
+      }
+
+      @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+
+      .sensor-value.loading {
+        min-width: 80px;
+        height: 24px;
+      }
+
+      .stat-value.loading {
+        min-width: 60px;
+        height: 32px;
+      }
+
+      /* Unavailable State */
+      .sensor-value.unavailable,
+      .stat-value.unavailable {
+        color: var(--secondary-text-color);
+        font-style: italic;
+        opacity: 0.6;
+      }
+
+      .sensor-item.unavailable {
+        opacity: 0.7;
+        background: repeating-linear-gradient(
+          45deg,
+          var(--secondary-background-color),
+          var(--secondary-background-color) 10px,
+          var(--card-background-color) 10px,
+          var(--card-background-color) 20px
+        );
+      }
+
+      /* Error Animations */
+      .error-item {
+        animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-30px) scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0) scale(1);
+        }
+      }
+
+      .error-section.has-errors {
+        animation: pulseBorder 2.5s ease-in-out infinite;
+        position: relative;
+      }
+
+      @keyframes pulseBorder {
+        0%, 100% { 
+          border-color: #ff9800;
+          box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4);
+        }
+        50% { 
+          border-color: #f57c00;
+          box-shadow: 0 0 0 8px rgba(255, 152, 0, 0);
+        }
+      }
+
+      .error-icon {
+        animation: shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        animation-delay: 0.2s;
+      }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0) rotate(0deg); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px) rotate(-5deg); }
+        20%, 40%, 60%, 80% { transform: translateX(5px) rotate(5deg); }
+      }
+
+      /* Alert badge for error count */
+      .error-section-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .error-count-badge {
+        background: #ff9800;
+        color: white;
+        border-radius: 12px;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        animation: pop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        animation-delay: 0.4s;
+        animation-fill-mode: both;
+        opacity: 0;
+      }
+
+      @keyframes pop {
+        from {
+          opacity: 0;
+          transform: scale(0);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      /* Success state animation */
+      .no-errors {
+        animation: fadeIn 0.5s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .success-icon {
+        animation: checkmark 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        display: inline-block;
+      }
+
+      @keyframes checkmark {
+        from {
+          transform: scale(0) rotate(-180deg);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1) rotate(0deg);
+          opacity: 1;
+        }
+      }
+
+      /* Smooth value transitions */
+      .sensor-value,
+      .stat-value {
+        transition: color 0.3s ease, transform 0.3s ease;
+      }
+
+      .sensor-value.updating,
+      .stat-value.updating {
+        animation: valueChange 0.6s ease;
+      }
+
+      @keyframes valueChange {
+        0%, 100% { transform: scale(1); }
+        50% { 
+          transform: scale(1.1);
+          color: var(--primary-color);
+        }
+      }
+
+      /* Switch state transitions */
+      .switch-button {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .switch-button.on {
+        animation: switchOn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      }
+
+      @keyframes switchOn {
+        from {
+          transform: scale(0.8);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* Enhanced Dark Mode Styling */
+      @media (prefers-color-scheme: dark) {
+        .section {
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+                      0 2px 8px rgba(0, 0, 0, 0.4);
+          background: rgba(var(--card-background-color-rgb, 24, 24, 24), 0.6);
+          backdrop-filter: blur(8px);
+        }
+        
+        .section:hover {
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+                      0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .stat-item {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-item:hover {
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+          border-color: rgba(255, 255, 255, 0.15);
+        }
+        
+        .switch-button.on {
+          box-shadow: 0 2px 12px rgba(var(--primary-color-rgb, 3, 169, 244), 0.5);
+        }
+        
+        .switch-button.on:hover {
+          box-shadow: 0 4px 20px rgba(var(--primary-color-rgb, 3, 169, 244), 0.6);
+        }
+        
+        .sensor-item,
+        .control-item {
+          background: rgba(var(--secondary-background-color-rgb, 32, 32, 32), 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .sensor-item:hover {
+          background: rgba(var(--secondary-background-color-rgb, 32, 32, 32), 1);
+          border-color: rgba(255, 255, 255, 0.12);
+        }
+        
+        /* Error section enhancements */
+        .error-section.has-errors {
+          box-shadow: 0 0 0 2px #ff9800,
+                      0 4px 20px rgba(255, 152, 0, 0.3);
+        }
+        
+        .error-item {
+          background: rgba(255, 152, 0, 0.15);
+          border-color: rgba(255, 152, 0, 0.5);
+          box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2);
+        }
+        
+        /* Loading state in dark mode */
+        .loading {
+          background: linear-gradient(90deg, 
+            rgba(255, 255, 255, 0.05) 25%, 
+            rgba(255, 255, 255, 0.1) 50%, 
+            rgba(255, 255, 255, 0.05) 75%
+          );
+        }
+
+        /* Glassmorphism Enhancement */
+        ha-card {
+          background: rgba(var(--card-background-color-rgb, 24, 24, 24), 0.75);
+          backdrop-filter: blur(12px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+      }
+
+      /* Enhanced Light Mode Styling */
+      @media (prefers-color-scheme: light) {
+        .section {
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1),
+                      0 2px 12px rgba(0, 0, 0, 0.06);
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(8px);
+        }
+        
+        .section:hover {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                      0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-item {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        
+        .stat-item:hover {
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+          border-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        .switch-button.on {
+          box-shadow: 0 2px 12px rgba(var(--primary-color-rgb, 3, 169, 244), 0.3);
+        }
+        
+        .switch-button.on:hover {
+          box-shadow: 0 4px 20px rgba(var(--primary-color-rgb, 3, 169, 244), 0.4);
+        }
+        
+        .sensor-item,
+        .control-item {
+          background: rgba(var(--secondary-background-color-rgb, 245, 245, 245), 0.8);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        
+        .sensor-item:hover {
+          background: rgba(var(--secondary-background-color-rgb, 245, 245, 245), 1);
+          border-color: rgba(0, 0, 0, 0.12);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Error section enhancements */
+        .error-section.has-errors {
+          box-shadow: 0 0 0 2px #ff9800,
+                      0 4px 20px rgba(255, 152, 0, 0.2);
+        }
+        
+        .error-item {
+          background: rgba(255, 152, 0, 0.08);
+          border-color: rgba(255, 152, 0, 0.4);
+          box-shadow: 0 2px 8px rgba(255, 152, 0, 0.15);
+        }
+        
+        /* Loading state in light mode */
+        .loading {
+          background: linear-gradient(90deg, 
+            rgba(0, 0, 0, 0.08) 25%, 
+            rgba(0, 0, 0, 0.04) 50%, 
+            rgba(0, 0, 0, 0.08) 75%
+          );
+        }
+
+        /* Glassmorphism Enhancement */
+        ha-card {
+          background: rgba(var(--card-background-color-rgb, 255, 255, 255), 0.85);
+          backdrop-filter: blur(12px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+      }
+
+      /* Reduce motion for accessibility */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
       }
 
       @media (max-width: 600px) {
