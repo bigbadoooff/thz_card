@@ -1485,11 +1485,15 @@ const $=globalThis,w=t=>t,k=$.trustedTypes,E=k?k.createPolicy("lit-html",{create
         background-size: 200% 100%;
         animation: loading 1.5s ease-in-out infinite;
         border-radius: 4px;
-        color: transparent !important;
         min-width: 60px;
         display: inline-block;
         position: relative;
         overflow: hidden;
+      }
+
+      .sensor-value.loading,
+      .stat-value.loading {
+        color: transparent;
       }
 
       .loading::after {
@@ -1698,6 +1702,7 @@ const $=globalThis,w=t=>t,k=$.trustedTypes,E=k?k.createPolicy("lit-html",{create
           box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05),
                       0 2px 8px rgba(0, 0, 0, 0.4);
           background: rgba(var(--card-background-color-rgb, 24, 24, 24), 0.6);
+          -webkit-backdrop-filter: blur(8px);
           backdrop-filter: blur(8px);
         }
         
@@ -1759,6 +1764,7 @@ const $=globalThis,w=t=>t,k=$.trustedTypes,E=k?k.createPolicy("lit-html",{create
         /* Glassmorphism Enhancement */
         ha-card {
           background: rgba(var(--card-background-color-rgb, 24, 24, 24), 0.75);
+          -webkit-backdrop-filter: blur(12px) saturate(180%);
           backdrop-filter: blur(12px) saturate(180%);
           border: 1px solid rgba(255, 255, 255, 0.12);
         }
@@ -1770,6 +1776,7 @@ const $=globalThis,w=t=>t,k=$.trustedTypes,E=k?k.createPolicy("lit-html",{create
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1),
                       0 2px 12px rgba(0, 0, 0, 0.06);
           background: rgba(255, 255, 255, 0.95);
+          -webkit-backdrop-filter: blur(8px);
           backdrop-filter: blur(8px);
         }
         
@@ -1832,6 +1839,7 @@ const $=globalThis,w=t=>t,k=$.trustedTypes,E=k?k.createPolicy("lit-html",{create
         /* Glassmorphism Enhancement */
         ha-card {
           background: rgba(var(--card-background-color-rgb, 255, 255, 255), 0.85);
+          -webkit-backdrop-filter: blur(12px) saturate(180%);
           backdrop-filter: blur(12px) saturate(180%);
           border: 1px solid rgba(255, 255, 255, 0.18);
         }
@@ -1842,9 +1850,9 @@ const $=globalThis,w=t=>t,k=$.trustedTypes,E=k?k.createPolicy("lit-html",{create
         *,
         *::before,
         *::after {
-          animation-duration: 0.01ms !important;
+          animation-duration: 0s !important;
           animation-iteration-count: 1 !important;
-          transition-duration: 0.01ms !important;
+          transition-duration: 0s !important;
         }
       }
 
