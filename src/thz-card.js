@@ -683,13 +683,29 @@ class ThzCard extends LitElement {
               <div class="control-item">
                 <div class="control-name">${name}</div>
                 <div class="number-control">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._decrementNumber(entityId, step, min)}
+                    ?disabled=${parseFloat(value) <= min}
+                    aria-label="Decrease ${name}">
+                    −
+                  </button>
                   <input 
                     type="number" 
                     .value=${value}
                     min=${min}
                     max=${max}
                     step=${step}
-                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}>
+                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}
+                    @input=${(e) => this._validateNumberInput(e, min, max)}
+                    aria-label="${name}">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._incrementNumber(entityId, step, max)}
+                    ?disabled=${parseFloat(value) >= max}
+                    aria-label="Increase ${name}">
+                    +
+                  </button>
                   <span class="unit">${unit}</span>
                 </div>
               </div>
@@ -758,13 +774,29 @@ class ThzCard extends LitElement {
               <div class="control-item">
                 <div class="control-name">${name}</div>
                 <div class="number-control">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._decrementNumber(entityId, step, min)}
+                    ?disabled=${parseFloat(value) <= min}
+                    aria-label="Decrease ${name}">
+                    −
+                  </button>
                   <input 
                     type="number" 
                     .value=${value}
                     min=${min}
                     max=${max}
                     step=${step}
-                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}>
+                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}
+                    @input=${(e) => this._validateNumberInput(e, min, max)}
+                    aria-label="${name}">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._incrementNumber(entityId, step, max)}
+                    ?disabled=${parseFloat(value) >= max}
+                    aria-label="Increase ${name}">
+                    +
+                  </button>
                   <span class="unit">${unit}</span>
                 </div>
               </div>
@@ -883,13 +915,29 @@ class ThzCard extends LitElement {
               <div class="control-item">
                 <div class="control-name">${name}</div>
                 <div class="number-control">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._decrementNumber(entityId, step, min)}
+                    ?disabled=${parseFloat(value) <= min}
+                    aria-label="Decrease ${name}">
+                    −
+                  </button>
                   <input 
                     type="number" 
                     .value=${value}
                     min=${min}
                     max=${max}
                     step=${step}
-                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}>
+                    @change=${(e) => this._handleNumberChange(entityId, e.target.value)}
+                    @input=${(e) => this._validateNumberInput(e, min, max)}
+                    aria-label="${name}">
+                  <button 
+                    class="number-control-button"
+                    @click=${() => this._incrementNumber(entityId, step, max)}
+                    ?disabled=${parseFloat(value) >= max}
+                    aria-label="Increase ${name}">
+                    +
+                  </button>
                   <span class="unit">${unit}</span>
                 </div>
               </div>
@@ -1084,6 +1132,51 @@ class ThzCard extends LitElement {
       entity_id: entityId,
       value: numValue,
     });
+  }
+
+  _incrementNumber(entityId, step, max) {
+    const entity = this.hass.states[entityId];
+    if (!entity) return;
+    
+    const currentValue = parseFloat(entity.state);
+    const stepValue = parseFloat(step) || 1;
+    const maxValue = parseFloat(max) || 100;
+    
+    if (isNaN(currentValue)) return;
+    
+    const newValue = Math.min(currentValue + stepValue, maxValue);
+    this._handleNumberChange(entityId, newValue);
+  }
+
+  _decrementNumber(entityId, step, min) {
+    const entity = this.hass.states[entityId];
+    if (!entity) return;
+    
+    const currentValue = parseFloat(entity.state);
+    const stepValue = parseFloat(step) || 1;
+    const minValue = parseFloat(min) || 0;
+    
+    if (isNaN(currentValue)) return;
+    
+    const newValue = Math.max(currentValue - stepValue, minValue);
+    this._handleNumberChange(entityId, newValue);
+  }
+
+  _validateNumberInput(event, min, max) {
+    const input = event.target;
+    const value = parseFloat(input.value);
+    
+    if (isNaN(value)) return;
+    
+    const minValue = parseFloat(min) || 0;
+    const maxValue = parseFloat(max) || 100;
+    
+    // Clamp value between min and max
+    if (value < minValue) {
+      input.value = minValue;
+    } else if (value > maxValue) {
+      input.value = maxValue;
+    }
   }
 
   static get styles() {
