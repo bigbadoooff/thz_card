@@ -1413,40 +1413,6 @@ class ThzCard extends LitElement {
         line-height: 1;
       }
 
-      /* Dark mode specific enhancements */
-      @media (prefers-color-scheme: dark) {
-        .section {
-          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-                      0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-        
-        .section:hover {
-          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-                      0 4px 16px rgba(0, 0, 0, 0.4);
-        }
-        
-        .section-title {
-          border-bottom-color: rgba(255, 255, 255, 0.1);
-        }
-      }
-
-      /* Light mode specific enhancements */
-      @media (prefers-color-scheme: light) {
-        .section {
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08),
-                      0 2px 8px rgba(0, 0, 0, 0.04);
-        }
-        
-        .section:hover {
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12),
-                      0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-        
-        .section-title {
-          border-bottom-color: rgba(0, 0, 0, 0.08);
-        }
-      }
-
       .sensor-grid,
       .control-grid {
         display: grid;
@@ -1605,12 +1571,12 @@ class ThzCard extends LitElement {
         padding: 0;
       }
 
-      .number-control-button:hover {
+      .number-control-button:not(:disabled):hover {
         transform: scale(1.1);
         box-shadow: 0 2px 8px rgba(var(--primary-color-rgb, 3, 169, 244), 0.4);
       }
 
-      .number-control-button:active {
+      .number-control-button:not(:disabled):active {
         transform: scale(0.95);
       }
 
