@@ -1,5 +1,4 @@
-import { LitElement, html, css } from 'lit';
-import { createThing } from 'custom-card-helpers';
+import { LitElement, html, css, svg } from 'lit';
 import { findEntitiesByPattern } from './utils.js';
 import './thz-card-editor.js';
 
@@ -29,7 +28,35 @@ class ThzCard extends LitElement {
 
   constructor() {
     super();
-    this._graphCards = {};
+    // key -> { entityIds, hours, loading, error, series, fetchedAt }
+    this._graphData = {};
+    // key -> { x, t, items } for the point currently under the pointer
+    this._graphHover = {};
+    this._graphRefreshTimer = null;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    // Periodically re-render so stale graph data gets refreshed even if
+    // hass doesn't otherwise change (e.g. entities with slow-changing state).
+    this._graphRefreshTimer = window.setInterval(() => {
+      this.requestUpdate();
+    }, 60000);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this._graphRefreshTimer) {
+      window.clearInterval(this._graphRefreshTimer);
+      this._graphRefreshTimer = null;
+    }
+  }
+
+  updated(changedProps) {
+    if (changedProps.has('hass')) {
+      const isDark = !!(this.hass && this.hass.themes && this.hass.themes.darkMode);
+      this.classList.toggle('thz-dark', isDark);
+    }
   }
 
   static getConfigElement() {
@@ -356,48 +383,357 @@ class ThzCard extends LitElement {
   }
 
   /**
-   * Creates an embedded HA history-graph card for displaying sensor history
-   * Uses Home Assistant's card helpers for reliable graph display
+   * Renders a self-contained SVG history chart for the given entities.
+   *
+   * This intentionally does NOT rely on Home Assistant's internal
+   * `hui-history-graph-card` element: that element is only registered with
+   * the browser's custom element registry once HA's frontend has lazily
+   * loaded it elsewhere, so asking `custom-card-helpers` to create one on
+   * demand is unreliable and is why the graphs in this card previously
+   * failed to load for many users. Fetching history directly from the
+   * standard `history/period` REST endpoint and drawing our own chart
+   * removes that dependency entirely.
    */
   _renderHistoryGraph(entityIds, title, graphKey) {
-    // Validate entityIds is non-empty
     if (!entityIds || entityIds.length === 0) {
       return '';
     }
-    
+
     const hours = this.config.graph_hours || 24;
-    
-    // Create entities config for history-graph
-    const entities = entityIds.map(entityId => {
-      const entity = this.hass.states[entityId];
-      const name = entity ? this._getEntityName(entity) : entityId;
-      return { entity: entityId, name: name };
-    });
-    
-    // Create the history-graph card using HA's card helpers
-    const cardConfig = {
-      type: 'history-graph',
-      entities: entities,
-      hours_to_show: hours,
-      refresh_interval: 0
-    };
-    
-    // Cache key for the card to avoid recreation on every render
     const cacheKey = graphKey || entityIds.join(',');
-    
-    // Create or get cached card element
-    if (!this._graphCards[cacheKey]) {
-      this._graphCards[cacheKey] = createThing(cardConfig);
+    const entry = this._getGraphEntry(entityIds, hours, cacheKey);
+
+    // Prefer showing previously-fetched data over a transient error from a
+    // background refresh; only show the error/skeleton states when we have
+    // nothing to display yet.
+    let body;
+    if (entry.series) {
+      body = entry.series.every((s) => s.points.length === 0)
+        ? html`<div class="graph-message">No history data available yet</div>`
+        : this._renderChartSvg(entry, cacheKey, hours);
+    } else if (entry.error) {
+      body = html`<div class="graph-message graph-error">⚠️ Unable to load history data</div>`;
+    } else {
+      body = html`
+        <div class="graph-skeleton">
+          <div class="loading"></div>
+        </div>
+      `;
     }
-    
-    const card = this._graphCards[cacheKey];
-    card.hass = this.hass;
-    card.setConfig(cardConfig);
-    
+
     return html`
       <div class="history-graph-container">
         <div class="graph-title">${title}</div>
-        <div class="graph-card-wrapper">${card}</div>
+        ${body}
+      </div>
+    `;
+  }
+
+  /**
+   * Returns the cached data/state for a graph, kicking off a (re)fetch when
+   * the requested entities/time range changed or the cached data is stale.
+   */
+  _getGraphEntry(entityIds, hours, cacheKey) {
+    const REFRESH_MS = 60000;
+    const entityKey = entityIds.join(',');
+    let entry = this._graphData[cacheKey];
+
+    const paramsChanged = !entry || entry.entityKey !== entityKey || entry.hours !== hours;
+
+    if (paramsChanged) {
+      entry = {
+        entityKey,
+        hours,
+        loading: true,
+        error: false,
+        series: null,
+        fetchedAt: 0,
+      };
+      this._graphData[cacheKey] = entry;
+      this._fetchGraphHistory(cacheKey, entityIds, hours);
+    } else if (!entry.loading && Date.now() - entry.fetchedAt > REFRESH_MS) {
+      entry.loading = true;
+      this._fetchGraphHistory(cacheKey, entityIds, hours);
+    }
+
+    return entry;
+  }
+
+  async _fetchGraphHistory(cacheKey, entityIds, hours) {
+    const entry = this._graphData[cacheKey];
+    if (!entry) return;
+
+    try {
+      const end = new Date();
+      const start = new Date(end.getTime() - hours * 60 * 60 * 1000);
+      const path = `history/period/${start.toISOString()}?filter_entity_id=${entityIds.join(
+        ',',
+      )}&end_time=${encodeURIComponent(end.toISOString())}&minimal_response`;
+
+      const raw = await this.hass.callApi('GET', path);
+      const buckets = Array.isArray(raw) ? raw : [];
+
+      const series = entityIds.map((entityId) => {
+        const bucket = buckets.find((b) => b.length > 0 && b[0].entity_id === entityId) || [];
+        const points = bucket
+          .map((s) => ({
+            t: new Date(s.last_changed || s.last_updated).getTime(),
+            v: parseFloat(s.state),
+          }))
+          .filter((p) => Number.isFinite(p.t) && Number.isFinite(p.v))
+          .sort((a, b) => a.t - b.t);
+
+        const stateObj = this.hass.states[entityId];
+        return {
+          entityId,
+          name: stateObj ? this._getEntityName(stateObj) : entityId,
+          unit: (stateObj && stateObj.attributes.unit_of_measurement) || '',
+          points,
+        };
+      });
+
+      entry.series = series;
+      entry.loading = false;
+      entry.error = false;
+      entry.fetchedAt = Date.now();
+    } catch (err) {
+      entry.loading = false;
+      entry.error = true;
+      console.error('THZ Card: failed to load history for', cacheKey, err);
+    }
+
+    this.requestUpdate();
+  }
+
+  // Fixed-order categorical colors (validated for CVD/contrast in both
+  // light and dark HA themes) - see :host CSS custom properties.
+  _seriesColor(index) {
+    return `var(--thz-series-${(index % 4) + 1})`;
+  }
+
+  _formatGraphValue(v) {
+    if (!Number.isFinite(v)) return '--';
+    const rounded = Math.round(v * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  }
+
+  _formatGraphTime(timestamp, hours) {
+    const date = new Date(timestamp);
+    if (hours > 48) {
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
+        ' ' + date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
+
+  _nearestPointIndex(points, t) {
+    if (points.length === 0) return -1;
+    let lo = 0;
+    let hi = points.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (points[mid].t < t) lo = mid + 1;
+      else hi = mid;
+    }
+    if (lo > 0 && Math.abs(points[lo - 1].t - t) <= Math.abs(points[lo].t - t)) {
+      return lo - 1;
+    }
+    return lo;
+  }
+
+  _onGraphPointerMove(e, cacheKey, entry, hours) {
+    if (this._graphHoverRaf) return;
+    this._graphHoverRaf = requestAnimationFrame(() => {
+      this._graphHoverRaf = null;
+      const wrapper = e.currentTarget;
+      const rect = wrapper.getBoundingClientRect();
+      if (rect.width === 0) return;
+
+      const CHART = this._graphChartMetrics(hours);
+      const fx = (e.clientX - rect.left) / rect.width;
+      const svgX = CHART.padLeft + Math.min(Math.max(fx, 0), 1) * CHART.chartW;
+      const t = CHART.tStart + ((svgX - CHART.padLeft) / CHART.chartW) * (CHART.tEnd - CHART.tStart);
+
+      const items = entry.series
+        .map((s, i) => {
+          const idx = this._nearestPointIndex(s.points, t);
+          if (idx === -1) return null;
+          return {
+            name: s.name,
+            unit: s.unit,
+            color: this._seriesColor(i),
+            value: s.points[idx].v,
+          };
+        })
+        .filter(Boolean);
+
+      if (items.length === 0) return;
+
+      this._graphHover[cacheKey] = { x: svgX, t, items };
+      this.requestUpdate();
+    });
+  }
+
+  _onGraphPointerLeave(cacheKey) {
+    if (this._graphHover[cacheKey]) {
+      delete this._graphHover[cacheKey];
+      this.requestUpdate();
+    }
+  }
+
+  _graphChartMetrics(hours) {
+    const width = 600;
+    const height = 200;
+    const padLeft = 44;
+    const padRight = 12;
+    const padTop = 12;
+    const padBottom = 28;
+    const tEnd = Date.now();
+    const tStart = tEnd - hours * 60 * 60 * 1000;
+    return {
+      width,
+      height,
+      padLeft,
+      padRight,
+      padTop,
+      padBottom,
+      chartW: width - padLeft - padRight,
+      chartH: height - padTop - padBottom,
+      tStart,
+      tEnd,
+    };
+  }
+
+  _renderChartSvg(entry, cacheKey, hours) {
+    const CHART = this._graphChartMetrics(hours);
+    const series = entry.series;
+    const units = new Set(series.filter((s) => s.points.length > 0).map((s) => s.unit));
+    const normalize = units.size > 1;
+
+    // Shared y-domain when every plotted series shares the same unit;
+    // otherwise each series is normalized to its own min/max so wildly
+    // different scales (e.g. % vs kW) don't flatten each other out.
+    let sharedMin = Infinity;
+    let sharedMax = -Infinity;
+    if (!normalize) {
+      series.forEach((s) => s.points.forEach((p) => {
+        if (p.v < sharedMin) sharedMin = p.v;
+        if (p.v > sharedMax) sharedMax = p.v;
+      }));
+      if (!Number.isFinite(sharedMin) || !Number.isFinite(sharedMax)) {
+        sharedMin = 0;
+        sharedMax = 1;
+      } else if (sharedMin === sharedMax) {
+        sharedMin -= 1;
+        sharedMax += 1;
+      }
+    }
+
+    const xFor = (t) => CHART.padLeft +
+      Math.min(Math.max((t - CHART.tStart) / (CHART.tEnd - CHART.tStart), 0), 1) * CHART.chartW;
+
+    const plotted = series.map((s) => {
+      let min = sharedMin;
+      let max = sharedMax;
+      if (normalize) {
+        min = Infinity;
+        max = -Infinity;
+        s.points.forEach((p) => {
+          if (p.v < min) min = p.v;
+          if (p.v > max) max = p.v;
+        });
+        if (!Number.isFinite(min) || !Number.isFinite(max)) {
+          min = 0;
+          max = 1;
+        } else if (min === max) {
+          min -= 1;
+          max += 1;
+        }
+      }
+      const yFor = (v) => CHART.padTop + (1 - (v - min) / (max - min)) * CHART.chartH;
+      const coords = s.points.map((p) => ({ x: xFor(p.t), y: yFor(p.v) }));
+      return { ...s, coords, min, max, yFor };
+    });
+
+    const hover = this._graphHover[cacheKey];
+
+    const gridLines = [0, 0.5, 1].map((frac) => {
+      const y = CHART.padTop + frac * CHART.chartH;
+      return svg`<line class="graph-gridline" x1="${CHART.padLeft}" y1="${y}" x2="${CHART.width - CHART.padRight}" y2="${y}" />`;
+    });
+
+    const lines = plotted.map((s, i) => {
+      if (s.coords.length === 0) return svg``;
+      const color = this._seriesColor(i);
+      if (s.coords.length === 1) {
+        const p = s.coords[0];
+        return svg`<circle cx="${p.x}" cy="${p.y}" r="4" fill="${color}" stroke="var(--thz-chart-surface)" stroke-width="2" />`;
+      }
+      const d = s.coords.map((p, idx) => `${idx === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      const last = s.coords[s.coords.length - 1];
+      return svg`
+        <path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+        <circle cx="${last.x}" cy="${last.y}" r="4" fill="${color}" stroke="var(--thz-chart-surface)" stroke-width="2" />
+      `;
+    });
+
+    const crosshair = hover ? svg`
+      <line class="graph-crosshair" x1="${hover.x}" y1="${CHART.padTop}" x2="${hover.x}" y2="${CHART.padTop + CHART.chartH}" />
+    ` : svg``;
+
+    const yAxisLabels = normalize ? svg`` : svg`
+      <text class="graph-axis-label" x="4" y="${CHART.padTop + 8}">${this._formatGraphValue(sharedMax)}</text>
+      <text class="graph-axis-label" x="4" y="${CHART.padTop + CHART.chartH}">${this._formatGraphValue(sharedMin)}</text>
+    `;
+
+    const chart = svg`
+      <svg viewBox="0 0 ${CHART.width} ${CHART.height}" preserveAspectRatio="none" class="graph-svg">
+        ${gridLines}
+        ${yAxisLabels}
+        <text class="graph-axis-label graph-axis-time" x="${CHART.padLeft}" y="${CHART.height - 8}">
+          ${this._formatGraphTime(CHART.tStart, hours)}
+        </text>
+        <text class="graph-axis-label graph-axis-time graph-axis-time-end" x="${CHART.width - CHART.padRight}" y="${CHART.height - 8}">
+          now
+        </text>
+        ${lines}
+        ${crosshair}
+      </svg>
+    `;
+
+    const tooltip = hover ? html`
+      <div class="graph-tooltip" style="left: ${(hover.x / CHART.width) * 100}%">
+        <div class="graph-tooltip-time">${this._formatGraphTime(hover.t, hours)}</div>
+        ${hover.items.map((item) => html`
+          <div class="graph-tooltip-row">
+            <span class="graph-tooltip-dot" style="background: ${item.color}"></span>
+            <span class="graph-tooltip-name">${item.name}</span>
+            <span class="graph-tooltip-value">${this._formatGraphValue(item.value)}${item.unit}</span>
+          </div>
+        `)}
+      </div>
+    ` : '';
+
+    return html`
+      <div
+        class="graph-svg-wrapper"
+        @mousemove=${(e) => this._onGraphPointerMove(e, cacheKey, entry, hours)}
+        @mouseleave=${() => this._onGraphPointerLeave(cacheKey)}
+      >
+        ${chart}
+        ${tooltip}
+      </div>
+      <div class="graph-legend">
+        ${normalize ? html`<div class="graph-normalized-note">Scaled per sensor (different units)</div>` : ''}
+        ${plotted.map((s, i) => html`
+          <div class="graph-legend-item">
+            <span class="graph-legend-dot" style="background: ${this._seriesColor(i)}"></span>
+            <span class="graph-legend-name">${s.name}</span>
+            <span class="graph-legend-value">
+              ${s.points.length > 0 ? `${this._formatGraphValue(s.points[s.points.length - 1].v)}${s.unit}` : '--'}
+            </span>
+          </div>
+        `)}
       </div>
     `;
   }
@@ -1654,8 +1990,22 @@ class ThzCard extends LitElement {
         white-space: nowrap;
       }
 
-      /* Temperature Graph Styles */
-      /* History Graph Container - using HA's built-in history-graph card */
+      /* Temperature/Fan/Heating History Graph Styles */
+      :host {
+        --thz-series-1: #2a78d6;
+        --thz-series-2: #eb6834;
+        --thz-series-3: #1baf7a;
+        --thz-series-4: #eda100;
+        --thz-chart-surface: var(--secondary-background-color);
+      }
+
+      :host(.thz-dark) {
+        --thz-series-1: #3987e5;
+        --thz-series-2: #d95926;
+        --thz-series-3: #199e70;
+        --thz-series-4: #c98500;
+      }
+
       .history-graph-container {
         margin-bottom: 16px;
         padding: 12px;
@@ -1672,10 +2022,151 @@ class ThzCard extends LitElement {
         border-bottom: 1px solid var(--divider-color);
       }
 
-      .history-graph-container hui-history-graph-card {
-        --ha-card-background: transparent;
-        --ha-card-box-shadow: none;
-        --ha-card-border-width: 0;
+      .graph-skeleton {
+        height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .graph-skeleton .loading {
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        border-radius: 6px;
+      }
+
+      .graph-message {
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--secondary-text-color);
+        font-size: 13px;
+        text-align: center;
+        padding: 0 12px;
+      }
+
+      .graph-message.graph-error {
+        color: #ff9800;
+      }
+
+      .graph-svg-wrapper {
+        position: relative;
+        width: 100%;
+      }
+
+      .graph-svg {
+        display: block;
+        width: 100%;
+        height: 180px;
+        cursor: crosshair;
+      }
+
+      .graph-gridline {
+        stroke: var(--divider-color);
+        stroke-width: 1;
+        vector-effect: non-scaling-stroke;
+      }
+
+      .graph-crosshair {
+        stroke: var(--secondary-text-color);
+        stroke-width: 1;
+        stroke-dasharray: 3 3;
+        vector-effect: non-scaling-stroke;
+      }
+
+      .graph-axis-label {
+        font-size: 10px;
+        fill: var(--secondary-text-color);
+      }
+
+      .graph-axis-time-end {
+        text-anchor: end;
+      }
+
+      .graph-tooltip {
+        position: absolute;
+        top: 4px;
+        transform: translateX(-50%);
+        background: var(--card-background-color, #1c1c1c);
+        border: 1px solid var(--divider-color);
+        border-radius: 6px;
+        padding: 6px 8px;
+        font-size: 11px;
+        line-height: 1.5;
+        pointer-events: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        white-space: nowrap;
+        z-index: 2;
+      }
+
+      .graph-tooltip-time {
+        color: var(--secondary-text-color);
+        margin-bottom: 2px;
+        font-weight: 500;
+      }
+
+      .graph-tooltip-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .graph-tooltip-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .graph-tooltip-name {
+        color: var(--primary-text-color);
+      }
+
+      .graph-tooltip-value {
+        color: var(--primary-text-color);
+        font-weight: 600;
+        margin-left: auto;
+      }
+
+      .graph-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--divider-color);
+      }
+
+      .graph-normalized-note {
+        width: 100%;
+        font-size: 11px;
+        font-style: italic;
+        color: var(--secondary-text-color);
+      }
+
+      .graph-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+      }
+
+      .graph-legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .graph-legend-name {
+        color: var(--secondary-text-color);
+      }
+
+      .graph-legend-value {
+        color: var(--primary-text-color);
+        font-weight: 600;
       }
 
       /* Error Section Styles */
